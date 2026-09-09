@@ -1,9 +1,11 @@
-from dataclasses import dataclass
+from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.users.application.queries.get_user_by_id import GetUserByIdQuery
+from src.modules.auth.api.actor import RequestActor
 from src.core.config import settings
 from src.modules.auth.application.commands.login_user import LoginUserCommand
 from src.modules.auth.application.exceptions import InvalidTokenError
@@ -14,18 +16,15 @@ from src.modules.auth.infra.jwt_token_service import JwtTokenService
 from src.modules.auth.infra.repositories import SQLAlchemyAuthUserRepository
 from src.modules.users.api.dependencies import (
     get_password_hasher,
-    get_user_read_repository,
+)
+from src.modules.users.api.dependencies import (
+    get_mediator as get_users_mediator,
 )
 from src.modules.users.application.ports.password_hasher import PasswordHasher
-from src.modules.users.application.ports.user_repository import UserReadRepository
+from src.modules.users.domain.enums import Role
 from src.shared.application.mediator import Mediator
+
 from src.shared.infra.database.session import get_async_session
-
-
-@dataclass(frozen=True)
-class CurrentUser:
-    id: UUID
-    is_admin: bool
 
 
 def get_auth_user_repository(
@@ -80,30 +79,36 @@ def get_current_user_id(
         ) from exc
 
 
-async def get_current_user(
-    id: UUID = Depends(get_current_user_id),
-    user_read_repo: UserReadRepository = Depends(get_user_read_repository),
-) -> CurrentUser:
-    user = await user_read_repo.get_by_id(id)
-
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-        )
-
-    return CurrentUser(
-        id=user.id,
-        is_admin=user.is_admin,
+async def get_current_actor(
+    user_id: UUID = Depends(get_current_user_id),
+    mediator: Mediator = Depends(get_users_mediator),
+) -> RequestActor:
+    user = await mediator.send(GetUserByIdQuery(id=user_id))
+    return RequestActor(
+        user_id=user.id,
+        role=Role(user.role),
+        name=user.name,
     )
 
 
-async def require_admin(
-    current_user: CurrentUser = Depends(get_current_user),
-) -> CurrentUser:
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin role required",
-        )
-    return current_user
+def require_roles(*allowed: Role) -> Callable:
+    """Фабрика зависимостей. Использование:
+
+        @router.get("/x", dependencies=[Depends(require_roles(Role.NETWORK_ADMIN))])
+
+    или, если нужен сам актор внутри обработчика:
+
+        async def handler(actor: RequestActor = Depends(require_roles(Role.CLIENT))):
+    """
+
+    async def _check(
+        actor: RequestActor = Depends(get_current_actor),
+    ) -> RequestActor:
+        if actor.role not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="ACCESS_DENIED",
+            )
+        return actor
+
+    return _check

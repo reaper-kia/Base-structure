@@ -7,4 +7,4 @@ class UserReadModel:
     id: UUID
     name: str
     email: str
-    is_admin: bool
+    role: str

@@ -3,6 +3,7 @@ import asyncio
 import getpass
 from collections.abc import Sequence
 
+from src.modules.users.domain.enums import Role
 from src.modules.users.domain.entities import User
 from src.modules.users.domain.value_objects import Email, RawPassword, UserName
 from src.modules.users.infra.password_hasher import BcryptPasswordHasher
@@ -26,7 +27,7 @@ async def create_admin(
         existing_user = await uow.users.get_by_email(email_vo)
 
         if existing_user is not None:
-            if existing_user.is_admin:
+            if existing_user.role is Role.NETWORK_ADMIN:
                 print(f"Admin already exists: {email_vo.value}")
                 return 0
 
@@ -38,7 +39,7 @@ async def create_admin(
             name=name_vo,
             email=email_vo,
             password_hash=password_hasher.hash(raw_password.value),
-            is_admin=True,
+            role=Role.NETWORK_ADMIN,
         )
         await uow.users.add(admin)
         await uow.commit()

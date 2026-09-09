@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.modules.users.domain.enums import Role
 from src.modules.users.application.ports.user_repository import (
     UserReadRepository,
     UserRepository,
@@ -43,7 +44,7 @@ class SQLAlchemyUserRepository(UserRepository):
             name=user.name.value,
             email=user.email.value,
             password_hash=user.password_hash,
-            is_admin=user.is_admin,
+            role=user.role.value,
         )
         self.session.add(user_model)
 
@@ -56,7 +57,7 @@ class SQLAlchemyUserRepository(UserRepository):
             name=UserName(user_model.name),
             email=Email(user_model.email),
             password_hash=user_model.password_hash,
-            is_admin=user_model.is_admin,
+            role=Role(user_model.role),
         )
 
 
@@ -66,7 +67,10 @@ class SQLAlchemyUserReadRepository(UserReadRepository):
 
     async def get_by_id(self, id: UUID) -> UserReadModel | None:
         stmt = select(
-            UserModel.id, UserModel.name, UserModel.email, UserModel.is_admin
+            UserModel.id,
+            UserModel.name,
+            UserModel.email,
+            UserModel.role,
         ).where(UserModel.id == id)
         result = await self.session.execute(stmt)
         user_model = result.one_or_none()
@@ -78,5 +82,5 @@ class SQLAlchemyUserReadRepository(UserReadRepository):
             id=user_model.id,
             name=user_model.name,
             email=user_model.email,
-            is_admin=user_model.is_admin,
+            role=user_model.role,
         )

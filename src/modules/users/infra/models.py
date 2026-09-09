@@ -1,6 +1,7 @@
 import uuid
 
-from sqlalchemy import String, Boolean
+from src.modules.users.domain.enums import Role
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -18,4 +19,9 @@ class UserModel(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(500), nullable=False)
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    role: Mapped[str] = mapped_column(
+        String(32),
+        default=Role.CLIENT.value,
+        nullable=False,
+        index=True,
+    )

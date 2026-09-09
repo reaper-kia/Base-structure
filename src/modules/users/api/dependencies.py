@@ -5,6 +5,12 @@ from src.modules.users.application.commands.register_user import RegisterUserCom
 from src.modules.users.application.handlers.get_user_by_id import (
     GetUserByIdQueryHandler,
 )
+
+# к импортам
+from src.modules.users.application.commands.create_manager import CreateManagerCommand
+from src.modules.users.application.handlers.create_manager import (
+    CreateManagerCommandHandler,
+)
 from src.modules.users.application.handlers.register_user import (
     RegisterUserCommandHandler,
 )
@@ -51,6 +57,16 @@ def get_register_user_handler(
     )
 
 
+def get_create_manager_handler(
+    uow_factory: UnitOfWorkFactory = Depends(get_unit_of_work_factory),
+    password_hasher: PasswordHasher = Depends(get_password_hasher),
+) -> CreateManagerCommandHandler:
+    return CreateManagerCommandHandler(
+        uow_factory=uow_factory,
+        password_hasher=password_hasher,
+    )
+
+
 def get_user_by_id_handler(
     user_read_repository: UserReadRepository = Depends(get_user_read_repository),
 ) -> GetUserByIdQueryHandler:
@@ -61,11 +77,15 @@ def get_user_by_id_handler(
 
 def get_mediator(
     register_handler: RegisterUserCommandHandler = Depends(get_register_user_handler),
+    create_manager_handler: CreateManagerCommandHandler = Depends(
+        get_create_manager_handler
+    ),
     user_by_id_handler: GetUserByIdQueryHandler = Depends(get_user_by_id_handler),
 ) -> Mediator:
     mediator = Mediator()
 
     mediator.register(RegisterUserCommand, register_handler)
+    mediator.register(CreateManagerCommand, create_manager_handler)
     mediator.register(GetUserByIdQuery, user_by_id_handler)
 
     return mediator
