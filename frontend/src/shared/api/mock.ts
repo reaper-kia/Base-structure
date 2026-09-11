@@ -1,3 +1,4 @@
+import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
 import type {
   DocumentState,
   DocType,
@@ -8,16 +9,17 @@ import type {
   RequisiteState,
   RequisiteStatus,
   ProcessingStage,
+  ChangeItem,
 } from './types';
 
-// Переключатель сценария мока - одна константа, не три ветки кода
+// Переключатель сценария мока — одна константа, не три ветки кода
 export const MOCK_SCENARIO: MockScenario = 'all_found';
 
 // Задержка для имитации асинхронности
 const MOCK_DELAY = 1500;
 
 // Скорость обработки: 'fast' для разработки, 'slow' для проверки экрана (~60 сек)
-export const MOCK_SPEED: 'fast' | 'slow' = 'slow';
+export const MOCK_SPEED: 'fast' | 'slow' = 'fast';
 const POLLS_PER_STAGE = MOCK_SPEED === 'fast' ? 1 : 20;
 const MOCK_POLL_DELAY = 300;
 
@@ -99,8 +101,8 @@ const mockTemplates: Template[] = [
 
 // Хранилище документов в памяти
 const documents = new Map<string, DocumentState>();
-const pollCounts = new Map<string, number>();
 let documentCounter = 0;
+const pollCounts = new Map<string, number>();
 
 // Состояние dev-панели
 let devState: DevState = {
@@ -119,13 +121,124 @@ function generateId(): string {
   return `${Date.now()}-${++documentCounter}`;
 }
 
-// Получить финальный статус документа в зависимости от сценария
+// ====== Правила трансформации черновика и генерации DOCX ======
+
+const DOC_TYPE_FILE_NAMES: Record<string, string> = {
+  memo: 'sluzhebnaya-zapiska',
+  report: 'dokladnaya-zapiska',
+  reference: 'informacionnaya-spravka',
+  letter: 'pismo',
+};
+
+function formatDateForFilename(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+const STRUCTURE_HEADER = 'Служебная записка\nО предоставлении отпуска';
+
+const IMPROVEMENT_RULES: {
+  change: ChangeItem;
+  apply: (text: string) => string;
+}[] = [
+  {
+    change: { type: 'spelling', from: 'заявленее', to: 'заявление' },
+    apply: (text) => text.replace(/заявленее/gi, 'заявление'),
+  },
+  {
+    change: {
+      type: 'punctuation',
+      from: 'с 10 июня 2025 на 14 дней',
+      to: 'с 10 июня 2025 года на 14 календарных дней',
+    },
+    apply: (text) =>
+      text.replace(
+        /с 10 июня 2025 на 14 дней/gi,
+        'с 10 июня 2025 года на 14 календарных дней'
+      ),
+  },
+  {
+    change: {
+      type: 'style',
+      from: 'а то я уже задолбался работать без отдыха и хочу отдохнуть',
+      to: '',
+    },
+    apply: (text) =>
+      text.replace(
+        /[ \t]*а то я уже задолбался работать без отдыха и хочу отдохнуть/gi,
+        ''
+      ),
+  },
+];
+
+export function buildImprovedText(draft: string): string {
+  let text = draft;
+
+  for (const rule of IMPROVEMENT_RULES) {
+    text = rule.apply(text);
+  }
+
+  if (!/служебная записка/i.test(text)) {
+    text = `${STRUCTURE_HEADER}\n\n${text}`;
+  }
+
+  return text;
+}
+
+export function buildChanges(draft: string, improved: string): ChangeItem[] {
+  const changes: ChangeItem[] = IMPROVEMENT_RULES.filter((rule) =>
+    draft.toLowerCase().includes(rule.change.from.toLowerCase())
+  ).map((rule) => rule.change);
+
+  if (!/служебная записка/i.test(draft) && improved.includes(STRUCTURE_HEADER)) {
+    changes.push({ type: 'structure', from: '', to: STRUCTURE_HEADER });
+  }
+
+  return changes;
+}
+
+const FACT_ANCHORS = [
+  '10 июня 2025',
+  '14 календарных дней',
+  '85 000 руб.',
+  '92 500 руб.',
+  '7 500 руб.',
+  '15 сентября 2025',
+];
+
+async function buildDocxBlob(doc: DocumentState): Promise<Blob> {
+  const text = doc.improved_text ?? doc.draft;
+  const paragraphs = text.split('\n').map(
+    (line) =>
+      new Paragraph({
+        children: [new TextRun(line)],
+        spacing: { after: 120 },
+      })
+  );
+
+  const docxDocument = new DocxDocument({
+    sections: [{ children: paragraphs }],
+  });
+
+  return Packer.toBlob(docxDocument);
+}
+
+// ====== Финальный статус документа в зависимости от сценария ======
+
 function getTerminalDocumentState(
   draft: string,
   docType: string,
   templateId: string,
   id: string
 ): DocumentState {
+  const improvedText = buildImprovedText(draft);
+  const changes = buildChanges(draft, improvedText);
+
+  const source = FACT_ANCHORS.filter((anchor) => draft.includes(anchor));
+  const preserved = source.filter((anchor) => improvedText.includes(anchor));
+
   const baseState: DocumentState = {
     id,
     status: 'processed',
@@ -133,55 +246,52 @@ function getTerminalDocumentState(
     doc_type: docType,
     template_id: templateId,
     draft,
-    improved_text: 'Прошу предоставить мне ежегодный оплачиваемый отпуск с 10 июня 2025 года на 14 календарных дней.',
-    changes: [
-      { type: 'spelling', from: 'заявленее', to: 'заявление' },
-      { type: 'style', from: 'а то я уже задолбался', to: '' },
-    ],
+    improved_text: improvedText,
+    changes,
     requisites: [
       {
         key: 'addressee',
         label: 'Адресат',
         value: 'Директору ООО «Ромашка» Петрову П.П.',
-        status: 'found_in_draft',
+        status: 'found_in_draft' as RequisiteStatus,
         required: true,
       },
       {
         key: 'author',
         label: 'Автор',
         value: 'Иванов И.И.',
-        status: 'found_in_draft',
+        status: 'found_in_draft' as RequisiteStatus,
         required: true,
       },
       {
         key: 'position',
         label: 'Должность автора',
         value: 'Менеджер отдела продаж',
-        status: 'found_in_draft',
+        status: 'found_in_draft' as RequisiteStatus,
         required: true,
       },
       {
         key: 'subject',
         label: 'Заголовок к тексту',
         value: 'О предоставлении отпуска',
-        status: 'found_in_draft',
+        status: 'found_in_draft' as RequisiteStatus,
         required: true,
       },
       {
         key: 'doc_date',
         label: 'Дата документа',
         value: '11.09.2026',
-        status: 'auto_filled',
+        status: 'auto_filled' as RequisiteStatus,
         required: true,
       },
     ],
     fact_guard: {
       verdict: 'clean',
-      preserved: ['10 июня 2025', '14 календарных дней'],
-      lost: [],
+      preserved,
+      lost: source.filter((anchor) => !preserved.includes(anchor)),
       added: [],
-      source_count: 2,
-      preserved_count: 2,
+      source_count: source.length,
+      preserved_count: preserved.length,
     },
     is_fallback: false,
     error: null,
@@ -192,7 +302,7 @@ function getTerminalDocumentState(
       ...baseState,
       requisites: baseState.requisites.map((req) =>
         req.key === 'addressee'
-          ? { ...req, value: null, status: 'missing' }
+          ? { ...req, value: null, status: 'missing' as const }
           : req
       ),
     };
@@ -208,7 +318,8 @@ function getTerminalDocumentState(
       fact_guard: null,
       error: {
         code: 'llm_unavailable',
-        message: 'ИИ-компонент недоступен. Черновик сохранён, попробуйте ещё раз.',
+        message:
+          'ИИ-компонент недоступен. Черновик сохранён, попробуйте ещё раз.',
         recoverable: true,
       },
     };
@@ -217,7 +328,8 @@ function getTerminalDocumentState(
   return baseState;
 }
 
-// API моки
+// ====== API моки ======
+
 export const mockApi = {
   async getDocTypes(): Promise<DocType[]> {
     await delay(MOCK_DELAY);
@@ -250,8 +362,8 @@ export const mockApi = {
       is_fallback: false,
       error: null,
     };
-    documents.set(id, doc);
     pollCounts.set(id, 0);
+    documents.set(id, doc);
     return doc;
   },
 
@@ -262,12 +374,10 @@ export const mockApi = {
       throw new Error('Документ не найден');
     }
 
-    // Если документ уже в терминальном статусе — возвращаем как есть
     if (doc.status !== 'processing') {
       return { ...doc };
     }
 
-    // Продвигаем стадию в зависимости от количества поллингов
     const count = (pollCounts.get(id) || 0) + 1;
     pollCounts.set(id, count);
 
@@ -333,10 +443,11 @@ export const mockApi = {
       throw new Error('Документ не найден');
     }
 
-    pollCounts.set(id, 0);
     if (doc.status === 'processing') {
       throw new Error('Документ уже обрабатывается');
     }
+
+    pollCounts.set(id, 0);
 
     const reprocessing: DocumentState = {
       ...doc,
@@ -362,16 +473,11 @@ export const mockApi = {
       throw new Error('Документ ещё не обработан');
     }
 
-    // Создаём фиктивный DOCX
-    const content = `Документ: ${doc.doc_type}\n\nЧерновик:\n${doc.draft}\n\nУлучшенный текст:\n${doc.improved_text || 'Нет'}`;
-    const blob = new Blob([content], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    });
+    const blob = await buildDocxBlob(doc);
+    const baseName = DOC_TYPE_FILE_NAMES[doc.doc_type] ?? 'document';
+    const filename = `${baseName}-${formatDateForFilename(new Date())}.docx`;
 
-    return {
-      blob,
-      filename: `${doc.doc_type}-${new Date().toISOString().split('T')[0]}.docx`,
-    };
+    return { blob, filename };
   },
 
   async getTrace(id: string): Promise<TraceEntry[]> {
@@ -408,7 +514,9 @@ export const mockApi = {
         stage: 'validation',
         payload: {
           missing: doc.requisites.filter((r) => r.status === 'missing').map((r) => r.key),
-          auto_filled: doc.requisites.filter((r) => r.status === 'auto_filled').map((r) => r.key),
+          auto_filled: doc.requisites
+            .filter((r) => r.status === 'auto_filled')
+            .map((r) => r.key),
         },
       },
       {

@@ -4,6 +4,7 @@ import { useDocumentStore } from '../../shared/store/documentStore';
 import { usePollDocument } from '../../shared/hooks/usePollDocument';
 import { ProcessingScreen } from './ProcessingScreen';
 import { TimeoutScreen } from './TimeoutScreen';
+import { ResultScreen } from './ResultScreen';
 
 export function DocumentPage() {
   const { id } = useParams<{ id: string }>();
@@ -68,24 +69,8 @@ export function DocumentPage() {
             Повторить
           </button>
         </section>
-      ) : (
-        <section style={{ padding: '24px 0' }}>
-          <h2>Документ обработан</h2>
-          <p>Статус: {document.status}</p>
-          {document.status === 'degraded' && (
-            <p
-              style={{
-                color: '#856404',
-                backgroundColor: '#fff3cd',
-                padding: '12px',
-                borderRadius: '8px',
-              }}
-            >
-              Обработано в резервном режиме: ИИ-компонент был недоступен.
-            </p>
-          )}
-          <p>Diff и панель реквизитов появятся в FE-04 и FE-05.</p>
-        </section>
+            ) : (
+        <ResultScreen document={document} />
       )}
     </div>
   );
