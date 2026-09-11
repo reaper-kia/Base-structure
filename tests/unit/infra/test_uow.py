@@ -24,7 +24,7 @@ async def test_sqlalchemy_uow_initializes_all_repositories() -> None:
     entered = await uow.__aenter__()
 
     assert entered is uow
-    assert uow.users is not None
+    assert uow.documents is not None
     assert uow.outbox is not None
 
     await uow.__aexit__(None, None, None)

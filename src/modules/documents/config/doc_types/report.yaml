@@ -1,0 +1,10 @@
+name: "Докладная записка"
+structure_hint: "кому -> от кого -> изложение факта -> выводы -> предложения -> подпись"
+requisites:
+  - {key: addressee, label: "Адресат", required: true}
+  - {key: author,    label: "Автор",   required: true}
+  - {key: position,  label: "Должность автора", required: true}
+  - {key: subject,   label: "Заголовок к тексту", required: true}
+  - {key: doc_date,  label: "Дата документа", required: true}
+auto_fillable:
+  doc_date: today

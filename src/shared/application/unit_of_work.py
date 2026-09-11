@@ -1,6 +1,8 @@
 from typing import Protocol, Self
 
-from src.modules.users.application.ports.user_repository import UserRepository
+from src.modules.documents.application.ports.document_repository import (
+    DocumentRepository,
+)
 from src.shared.outbox.application.repositories import OutboxRepository
 
 
@@ -9,10 +11,9 @@ class UnitOfWork(Protocol):
 
     Новый модуль -> добавить сюда атрибут с типом порта репозитория,
     а в SQLAlchemyUnitOfWork.__aenter__ - его создание.
-    Оба места правятся вместе, иначе протокол разойдётся с реализацией.
     """
 
-    users: UserRepository
+    documents: DocumentRepository
     outbox: OutboxRepository
 
     async def __aenter__(self) -> Self: ...

@@ -1,0 +1,10 @@
+name: "Информационная справка"
+structure_hint: "заголовок -> период/основание -> изложение сведений -> подпись"
+requisites:
+  - {key: subject,   label: "Заголовок к тексту", required: true}
+  - {key: author,    label: "Составитель", required: true}
+  - {key: position,  label: "Должность составителя", required: true}
+  - {key: doc_date,  label: "Дата документа", required: true}
+  - {key: reg_number, label: "Регистрационный номер", required: false}
+auto_fillable:
+  doc_date: today

@@ -1,0 +1,12 @@
+name: "Письмо"
+structure_hint: "адресат -> обращение -> суть -> просьба -> подпись"
+requisites:
+  - {key: addressee,  label: "Адресат", required: true}
+  - {key: salutation, label: "Обращение", required: false}
+  - {key: subject,    label: "Заголовок к тексту", required: true}
+  - {key: author,     label: "Подписант", required: true}
+  - {key: position,   label: "Должность подписанта", required: true}
+  - {key: doc_date,   label: "Дата документа", required: true}
+  - {key: reg_number, label: "Регистрационный номер", required: false}
+auto_fillable:
+  doc_date: today

@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock
 class FakeUoW:
     """Small asynchronous unit-of-work double shared by unit tests."""
 
-    def __init__(self, *, users: Any, outbox: Any | None = None) -> None:
-        self.users = users
+    def __init__(self, *, documents: Any, outbox: Any | None = None) -> None:
+        self.documents = documents
         self.outbox = outbox
         self.commit = AsyncMock()
         self.rollback = AsyncMock()

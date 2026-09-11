@@ -1,4 +1,4 @@
-.PHONY: up up-events down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert admin ml-test
+.PHONY: up up-events down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert ml-test
 
 migration:
 	docker compose exec app alembic revision --autogenerate -m "$(name)"
@@ -60,9 +60,6 @@ cert:
 		-days 365 \
 		-config certs/openssl.cnf
 
-# Создать первого администратора
-admin:
-	docker compose exec app python -m src.modules.users.scripts.create_admin
 
 # Тесты ML-сервиса (у него свои зависимости и свой pytest)
 ml-test:

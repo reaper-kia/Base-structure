@@ -6,11 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Импорт роутеров модулей.
 # Новый модуль -> добавить сюда одну строку и один include_router ниже.
 from src.core.config import settings
-from src.modules.auth.api.router import router as auth_router
-from src.modules.users.api.router import router as users_router
+from src.modules.documents.api.router import router as documents_router
+from src.modules.templates.api.router import router as templates_router
 from src.shared.infra.database.health import check_database_connection
 from src.shared.infra.database.session import get_async_session
 from src.shared.infra.redis.client import close_redis_client
@@ -25,10 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(
-        title=settings.app_name,
-        lifespan=lifespan,
-    )
+    app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
     app.add_middleware(  # type: ignore[call-arg]
         CORSMiddleware,  # type: ignore[arg-type]
@@ -42,8 +38,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.include_router(users_router)
-    app.include_router(auth_router)
+    app.include_router(documents_router)
+    app.include_router(templates_router)
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:
