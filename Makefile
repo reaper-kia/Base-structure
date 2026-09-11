@@ -1,4 +1,15 @@
-.PHONY: up up-events down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert ml-test
+.PHONY: up up-events down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert ml-test pull-model models
+
+OLLAMA_MODEL ?= qwen2.5:7b-instruct
+
+# Скачать веса LLM. Делается ОДИН раз после первого `make up`:
+# ~5 ГБ ложатся в том ollama_models и переживают пересоздание контейнеров.
+pull-model:
+	docker compose exec ollama ollama pull $(OLLAMA_MODEL)
+
+# Проверить, что веса на месте (перед демо - обязательно).
+models:
+	docker compose exec ollama ollama list
 
 migration:
 	docker compose exec app alembic revision --autogenerate -m "$(name)"

@@ -27,7 +27,9 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    # --timeout-keep-alive 120: 7B-модель на CPU отвечает до минуты,
+   # дефолтные 5 секунд рвут соединение раньше, чем придёт ответ.
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 120
     healthcheck:
       test:
         [
@@ -108,6 +110,20 @@ services:
         condition: service_healthy
     restart: "no"
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hackathon_ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
   ml_service:
     build:
       context: ./ml_service
@@ -116,12 +132,20 @@ services:
     env_file:
       - path: ./ml_service/.env
         required: false
+    environment:
+      # Адрес LLM внутри docker-сети. Имя модели держим тут же,
+      # чтобы make pull-model и сервис не разъехались.
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:7b-instruct
     ports:
       - "8100:8100"
     volumes:
       # Переобучил модель на хосте -> docker compose restart ml_service.
       # Пересборка образа не нужна.
       - ./ml_service/artifacts:/app/artifacts
+    depends_on:
+     ollama:
+       condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=2)"]
@@ -201,3 +225,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  ollama_models:

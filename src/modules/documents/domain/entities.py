@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from src.modules.documents.domain.enums import (
     DocType,
     DocumentStatus,
+    ProcessingStage,
     RequisiteStatus,
 )
 
@@ -30,7 +31,8 @@ class Document:
     draft: str = ""
     doc_type: DocType = DocType.MEMO
     template_id: str = "classic"
-    status: DocumentStatus = DocumentStatus.CREATED
+    status: DocumentStatus = DocumentStatus.PROCESSING
+    stage: str | None = ProcessingStage.LLM
     improved_text: str | None = None
     changes: list[dict] = field(default_factory=list)
     requisites: list[Requisite] = field(default_factory=list)
