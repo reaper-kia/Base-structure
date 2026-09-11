@@ -4,6 +4,8 @@ import { AdminPage } from '../pages/admin/AdminPage';
 import { HomePage } from '../pages/home/HomePage';
 import { LoginPage } from '../pages/login/LoginPage';
 import { NotFoundPage } from '../pages/not-found/NotFoundPage';
+import { WizardPage } from '../pages/document-wizard/WizardPage';
+import { DocumentPage } from '../pages/document-detail/DocumentPage';
 import { PublicLayout } from '../widgets/layout/PublicLayout';
 
 export function AppRouter() {
@@ -12,12 +14,18 @@ export function AppRouter() {
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/wizard" element={<WizardPage />} />
+          <Route path="/documents/:id" element={<DocumentPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/admin"
-          element={<ProtectedRoute><AdminPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <AdminPage />
+            </ProtectedRoute>
+          }
         />
       </Routes>
     </BrowserRouter>
