@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 DEFAULT_TEMPLATE_ID = "classic"
 
-class TemplateLoader:
 
+class TemplateLoader:
     def __init__(self, assets_dir: Path | str = DEFAULT_ASSETS_DIR) -> None:
         self._assets_dir = Path(assets_dir)
 
@@ -77,7 +77,6 @@ class TemplateLoader:
                 f"применён «{DEFAULT_TEMPLATE_ID}»"
             ),
         )
-
 
     def _load_entry(self, entry: Path) -> Template:
         template_id = entry.name

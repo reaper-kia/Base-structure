@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-
 from src.core.config import settings
 
 ASSETS = Path(settings.templates_dir)

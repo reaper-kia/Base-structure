@@ -1,0 +1,25 @@
+# Игнор-файл именно для сборки ml_service (dockerfile=ml_service/Dockerfile).
+# BuildKit использует <dockerfile>.dockerignore ВМЕСТО корневого .dockerignore,
+# поэтому корневое правило "ml_service" здесь не действует и COPY ml_service/*
+# находит файлы. В контексте оставляем только ml_service/ и contracts/.
+.git
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+.venv
+venv
+myenv
+.env
+.env.*
+*.log
+*.zip
+frontend
+src
+migrations
+docs
+.github
+tests
+ml_service/tests
+ml_service/artifacts

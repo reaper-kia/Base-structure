@@ -126,33 +126,15 @@ services:
       start_period: 20s
   ml_service:
     build:
-      context: ./ml_service
-      dockerfile: Dockerfile
-    container_name: hackathon_ml
-    env_file:
-      - path: ./ml_service/.env
-        required: false
+      context: .
+      dockerfile: ml_service/Dockerfile
     environment:
-      # Адрес LLM внутри docker-сети. Имя модели держим тут же,
-      # чтобы make pull-model и сервис не разъехались.
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:7b-instruct
-    ports:
-      - "8100:8100"
-    volumes:
-      # Переобучил модель на хосте -> docker compose restart ml_service.
-      # Пересборка образа не нужна.
-      - ./ml_service/artifacts:/app/artifacts
+      OLLAMA_TIMEOUT_SECONDS: "90"
+      FALLBACK_ENABLED: "true"
     depends_on:
-     ollama:
-       condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=2)"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 15s
+      - ollama
 
   kafka:
     image: apache/kafka:4.3.0

@@ -31,17 +31,22 @@ async def list_templates() -> TemplateListResponse:
 
     return TemplateListResponse(templates=items)
 
+
 import re
 import yaml
 from fastapi import File, HTTPException, UploadFile
 from src.modules.templates.application.template_service import DEFAULT_ASSETS_DIR
 from src.modules.templates.infra.docx_parser import NotADocxError, parse_docx_template
 
-ASSETS_DIR = DEFAULT_ASSETS_DIR          # подменяется в тестах
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024      # п. 7.4: больше 10 МБ → 413
+ASSETS_DIR = DEFAULT_ASSETS_DIR  # подменяется в тестах
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # п. 7.4: больше 10 МБ → 413
 
 
-@router.post("/api/templates/upload", status_code=201, summary="Загрузка и автопарсинг DOCX-шаблона")
+@router.post(
+    "/api/templates/upload",
+    status_code=201,
+    summary="Загрузка и автопарсинг DOCX-шаблона",
+)
 async def upload_template(file: UploadFile = File(...)):
     data = await file.read()
 
@@ -53,7 +58,10 @@ async def upload_template(file: UploadFile = File(...)):
     except NotADocxError:
         raise HTTPException(status_code=422, detail="Файл не является корректным DOCX")
 
-    base = re.sub(r"[^a-z0-9]+", "-", (file.filename or "template").lower()).strip("-") or "template"
+    base = (
+        re.sub(r"[^a-z0-9]+", "-", (file.filename or "template").lower()).strip("-")
+        or "template"
+    )
     template_id, counter = base, 1
     while (ASSETS_DIR / template_id).exists():
         template_id = f"{base}-{counter}"
@@ -66,4 +74,9 @@ async def upload_template(file: UploadFile = File(...)):
         yaml.safe_dump(rules, allow_unicode=True, sort_keys=False), encoding="utf-8"
     )
 
-    return {"id": template_id, "name": rules["name"], "rules": rules, "warnings": warnings}
+    return {
+        "id": template_id,
+        "name": rules["name"],
+        "rules": rules,
+        "warnings": warnings,
+    }

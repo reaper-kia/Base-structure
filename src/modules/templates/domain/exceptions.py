@@ -13,5 +13,6 @@ class TemplateRulesInvalidError(TemplateDomainError):
 class TemplateMissingError(TemplateDomainError):
     pass
 
+
 class TemplateMissingError(TemplateDomainError):
     pass

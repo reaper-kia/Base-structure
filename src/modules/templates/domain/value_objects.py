@@ -7,7 +7,6 @@ from src.modules.templates.domain.exceptions import TemplateRulesInvalidError
 
 @dataclass(frozen=True)
 class PageMargins:
-
     top_mm: float
     bottom_mm: float
     left_mm: float

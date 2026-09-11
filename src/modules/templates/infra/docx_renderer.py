@@ -22,11 +22,12 @@ def _clear_paragraphs(element) -> None:
 
 
 def _safe_format(template: str, **kwargs) -> str:
-    """Безопасный format: неизвестные ключи заменяются на "[key]". """
+    """Безопасный format: неизвестные ключи заменяются на "[key]"."""
+
     class _DefaultDict(defaultdict):
         def __missing__(self, key):
             return f"[{key}]"
-    
+
     return template.format_map(_DefaultDict(str, kwargs))
 
 
@@ -73,12 +74,14 @@ class TemplateDocxRenderer:
         section.left_margin = Mm(page["left_mm"])
         section.right_margin = Mm(page["right_mm"])
 
-    def _apply_headers_footers(self, doc: Document, rules: dict, requisites: list[Requisite]) -> None:
+    def _apply_headers_footers(
+        self, doc: Document, rules: dict, requisites: list[Requisite]
+    ) -> None:
         hf = rules.get("header_footer", {})
         section = doc.sections[0]
-        
+
         context = {r.key: (r.value or "") for r in requisites}
-        
+
         header_cfg = hf.get("header", {})
         header_text = header_cfg.get("text", "")
         if header_text:
@@ -88,7 +91,9 @@ class TemplateDocxRenderer:
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = para.add_run(header_text)
             set_font(run, header_cfg.get("font_family", rules["font"]["family"]))
-            run.font.size = Pt(header_cfg.get("font_size_pt", rules["font"]["size_pt"] - 3))
+            run.font.size = Pt(
+                header_cfg.get("font_size_pt", rules["font"]["size_pt"] - 3)
+            )
 
         footer_cfg = hf.get("footer", {})
         footer_text = footer_cfg.get("text", "")
@@ -99,7 +104,9 @@ class TemplateDocxRenderer:
             para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = para.add_run(footer_text)
             set_font(run, footer_cfg.get("font_family", rules["font"]["family"]))
-            run.font.size = Pt(footer_cfg.get("font_size_pt", rules["font"]["size_pt"] - 3))
+            run.font.size = Pt(
+                footer_cfg.get("font_size_pt", rules["font"]["size_pt"] - 3)
+            )
 
     def _apply_layout(
         self,
@@ -111,7 +118,7 @@ class TemplateDocxRenderer:
         font_family = rules["font"]["family"]
         font_size = rules["font"]["size_pt"]
         spacing = rules.get("spacing", {})
-        
+
         alignment_map = {
             "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
             "left": WD_ALIGN_PARAGRAPH.LEFT,
@@ -128,7 +135,9 @@ class TemplateDocxRenderer:
             key = block["key"]
 
             if key == "body":
-                self._add_body_text(doc, improved_text, font_family, font_size, spacing, alignment_map)
+                self._add_body_text(
+                    doc, improved_text, font_family, font_size, spacing, alignment_map
+                )
                 continue
 
             if block.get("type") == "table" or block.get("layout") == "table":
@@ -143,9 +152,9 @@ class TemplateDocxRenderer:
 
             # ТЗ 5.1: Реквизит со статусом missing или left_blank (или без значения для обязательного)
             is_missing = (
-                not req.value or 
-                req.status == RequisiteStatus.MISSING or 
-                req.status == "left_blank"
+                not req.value
+                or req.status == RequisiteStatus.MISSING
+                or req.status == "left_blank"
             )
 
             para = doc.add_paragraph()
@@ -179,21 +188,21 @@ class TemplateDocxRenderer:
 
         table = doc.add_table(rows=len(rows_cfg), cols=2)
         table.autofit = True
-        
+
         for i, row_cfg in enumerate(rows_cfg):
             label = str(row_cfg.get("label", ""))
             value_key = str(row_cfg.get("value_key", ""))
-            
+
             req = next((r for r in requisites if r.key == value_key), None)
-            
+
             # ТЗ 5.3: Необязательный без значения не рендерится (в таблице оставляем пустым)
             is_optional_empty = req and not req.required and not req.value
-            
+
             is_missing = (
-                req is None or 
-                not req.value or 
-                req.status == RequisiteStatus.MISSING or 
-                req.status == "left_blank"
+                req is None
+                or not req.value
+                or req.status == RequisiteStatus.MISSING
+                or req.status == "left_blank"
             )
 
             if is_optional_empty:
@@ -218,7 +227,7 @@ class TemplateDocxRenderer:
             run_value = cell_value.add_paragraph().add_run(value)
             set_font(run_value, font_family)
             run_value.font.size = Pt(font_size)
-            
+
             if apply_highlight:
                 run_value.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
@@ -233,21 +242,23 @@ class TemplateDocxRenderer:
     ) -> None:
         align = alignment_map.get("justify", WD_ALIGN_PARAGRAPH.JUSTIFY)
         paragraphs = text.split("\n\n")
-        
+
         for para_text in paragraphs:
             if not para_text.strip():
                 continue
-                
+
             para = doc.add_paragraph()
             para.alignment = align
-            
+
             if "line" in spacing:
                 para.paragraph_format.line_spacing = spacing["line"]
             if "first_line_indent_cm" in spacing:
-                para.paragraph_format.first_line_indent = Cm(spacing["first_line_indent_cm"])
+                para.paragraph_format.first_line_indent = Cm(
+                    spacing["first_line_indent_cm"]
+                )
             if "space_after_pt" in spacing:
                 para.paragraph_format.space_after = Pt(spacing["space_after_pt"])
-                
+
             run = para.add_run(para_text.strip())
             set_font(run, font_family)
             run.font.size = Pt(font_size)

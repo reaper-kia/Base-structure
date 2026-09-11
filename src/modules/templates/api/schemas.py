@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 
 class TemplateItem(BaseModel):
-
     id: str
     name: str
     description: str

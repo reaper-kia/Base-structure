@@ -55,8 +55,10 @@ def parse_docx_template(data: bytes) -> tuple[dict, list[str]]:
         pg_mar = doc_root.find(f".//{_w('sectPr')}/{_w('pgMar')}")
         if pg_mar is not None:
             for rule_key, attr in (
-                ("top_mm", "top"), ("bottom_mm", "bottom"),
-                ("left_mm", "left"), ("right_mm", "right"),
+                ("top_mm", "top"),
+                ("bottom_mm", "bottom"),
+                ("left_mm", "left"),
+                ("right_mm", "right"),
             ):
                 raw = pg_mar.get(_w(attr))
                 if raw is not None:
@@ -69,11 +71,16 @@ def parse_docx_template(data: bytes) -> tuple[dict, list[str]]:
             styles_root = ET.fromstring(z.read("word/styles.xml"))
             normal = None
             for style in styles_root.findall(_w("style")):
-                if style.get(_w("styleId")) == "Normal" or style.get(_w("default")) == "1":
+                if (
+                    style.get(_w("styleId")) == "Normal"
+                    or style.get(_w("default")) == "1"
+                ):
                     normal = style
                     break
             if normal is None:
-                warnings.append("Нет явного стиля Normal — применены значения по умолчанию")
+                warnings.append(
+                    "Нет явного стиля Normal — применены значения по умолчанию"
+                )
             else:
                 rpr = normal.find(_w("rPr"))
                 if rpr is not None:
@@ -88,9 +95,13 @@ def parse_docx_template(data: bytes) -> tuple[dict, list[str]]:
                     spacing = ppr.find(_w("spacing"))
                     if spacing is not None:
                         if spacing.get(_w("line")):
-                            rules["spacing"]["line"] = round(int(spacing.get(_w("line"))) / 240, 2)
+                            rules["spacing"]["line"] = round(
+                                int(spacing.get(_w("line"))) / 240, 2
+                            )
                         if spacing.get(_w("after")):
-                            rules["spacing"]["space_after_pt"] = int(spacing.get(_w("after"))) / 20
+                            rules["spacing"]["space_after_pt"] = (
+                                int(spacing.get(_w("after"))) / 20
+                            )
                     ind = ppr.find(_w("ind"))
                     if ind is not None and ind.get(_w("firstLine")):
                         rules["spacing"]["first_line_indent_cm"] = round(
