@@ -19,7 +19,22 @@ PATTERNS: dict[str, str] = {
 }
 
 
+def normalize(anchor: str) -> str:
+    """
+    Приводит якорь к нормальной форме для честного сравнения.
+    Без этого 'Иванов И.И.' и 'Иванов И. И.' посчитаются разными.
+    """
+    # Переводим в нижний регистр
+    norm = anchor.lower()
+    # Убираем точки (важно для инициалов)
+    norm = norm.replace(".", " ")
+    # Схлопываем любые множественные пробелы в один и обрезаем края
+    norm = re.sub(r"\s+", " ", norm).strip()
+    return norm
+
+
 def extract(text: str) -> dict[str, list[str]]:
+    """Извлекает факты из текста строго по регулярным выражениям."""
     return {
         kind: [m.group(0).strip() for m in re.finditer(pattern, text)]
         for kind, pattern in PATTERNS.items()
