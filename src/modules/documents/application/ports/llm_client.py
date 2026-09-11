@@ -12,6 +12,19 @@ class LLMResult:
 
 
 class LLMClient(Protocol):
-    """Граница с ml_service. Бэкенд не знает, что внутри."""
+    """Граница с ml_service. Бэкенд не знает, что внутри.
 
-    async def process(self, draft: str, doc_type: str) -> LLMResult: ...
+    Поля запроса — из contracts/llm_contract.md §2: бэкенд читает
+    doc_types/*.yaml и передаёт всё, что нужно ml_service, чтобы тот
+    ничего не знал о типах документов сам.
+    """
+
+    async def process(
+        self,
+        *,
+        draft: str,
+        doc_type: str,
+        doc_type_name: str,
+        structure_hint: str,
+        requisite_keys: list[str],
+    ) -> LLMResult: ...

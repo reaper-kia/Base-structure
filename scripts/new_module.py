@@ -33,6 +33,7 @@ def register(path: str):
     def deco(fn):
         TEMPLATES[path] = fn()
         return fn
+
     return deco
 
 
@@ -49,9 +50,15 @@ def render(name: str, pascal: str) -> None:
         print(f"  создано: {target}")
 
     for pkg_dir in [
-        root, root / "api", root / "application", root / "application/commands",
-        root / "application/queries", root / "application/handlers",
-        root / "application/ports", root / "domain", root / "infra",
+        root,
+        root / "api",
+        root / "application",
+        root / "application/commands",
+        root / "application/queries",
+        root / "application/handlers",
+        root / "application/ports",
+        root / "domain",
+        root / "infra",
     ]:
         init = pkg_dir / "__init__.py"
         if not init.exists():
@@ -61,8 +68,10 @@ def render(name: str, pascal: str) -> None:
 # ---------------------------------------------------------------------------
 # domain
 
+
 @register("domain/entities.py")
-def _(): return '''from dataclasses import dataclass, field
+def _():
+    return '''from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
 
@@ -78,8 +87,10 @@ class {pascal}:
         return cls(name=name)
 '''
 
+
 @register("domain/exceptions.py")
-def _(): return '''class {pascal}NotFoundError(Exception):
+def _():
+    return '''class {pascal}NotFoundError(Exception):
     """Сущность {pascal} не найдена."""
 
 
@@ -87,8 +98,10 @@ class {pascal}AlreadyExistsError(Exception):
     """Нарушение уникальности при создании {pascal}."""
 '''
 
+
 @register("domain/value_objects.py")
-def _(): return '''"""TODO: value objects модуля {name}.
+def _():
+    return '''"""TODO: value objects модуля {name}.
 
 Пример из users/domain/value_objects.py — Email, UserName, RawPassword:
 неизменяемый dataclass с валидацией в __post_init__, бросает исключение
@@ -96,30 +109,37 @@ def _(): return '''"""TODO: value objects модуля {name}.
 """
 '''
 
+
 # ---------------------------------------------------------------------------
 # application: commands / queries / handlers / ports / read_models
 
+
 @register("application/commands/create_{name}.py")
-def _(): return '''from dataclasses import dataclass
+def _():
+    return """from dataclasses import dataclass
 
 
 @dataclass
 class Create{pascal}Command:
     name: str
-'''
+"""
+
 
 @register("application/queries/get_{name}_by_id.py")
-def _(): return '''from dataclasses import dataclass
+def _():
+    return """from dataclasses import dataclass
 from uuid import UUID
 
 
 @dataclass(frozen=True)
 class Get{pascal}ByIdQuery:
     id: UUID
-'''
+"""
+
 
 @register("application/read_models.py")
-def _(): return '''from dataclasses import dataclass
+def _():
+    return """from dataclasses import dataclass
 from uuid import UUID
 
 
@@ -127,10 +147,12 @@ from uuid import UUID
 class {pascal}ReadModel:
     id: UUID
     name: str
-'''
+"""
+
 
 @register("application/ports/{name}_repository.py")
-def _(): return '''from typing import Protocol
+def _():
+    return """from typing import Protocol
 from uuid import UUID
 
 from src.modules.{name}.application.read_models import {pascal}ReadModel
@@ -145,10 +167,12 @@ class {pascal}Repository(Protocol):
 
 class {pascal}ReadRepository(Protocol):
     async def get_by_id(self, id: UUID) -> {pascal}ReadModel | None: ...
-'''
+"""
+
 
 @register("application/handlers/create_{name}.py")
-def _(): return '''from dataclasses import dataclass
+def _():
+    return """from dataclasses import dataclass
 
 from src.modules.{name}.application.commands.create_{name} import Create{pascal}Command
 from src.modules.{name}.domain.entities import {pascal}
@@ -169,10 +193,12 @@ class Create{pascal}CommandHandler:
             await uow.commit()
 
         return entity
-'''
+"""
+
 
 @register("application/handlers/get_{name}_by_id.py")
-def _(): return '''from dataclasses import dataclass
+def _():
+    return """from dataclasses import dataclass
 
 from src.modules.{name}.application.ports.{name}_repository import {pascal}ReadRepository
 from src.modules.{name}.application.queries.get_{name}_by_id import Get{pascal}ByIdQuery
@@ -190,13 +216,16 @@ class Get{pascal}ByIdQueryHandler:
             raise {pascal}NotFoundError(f"{pascal} {{query.id}} not found")
 
         return result
-'''
+"""
+
 
 # ---------------------------------------------------------------------------
 # infra
 
+
 @register("infra/models.py")
-def _(): return '''import uuid
+def _():
+    return """import uuid
 
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import UUID
@@ -213,10 +242,12 @@ class {pascal}Model(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-'''
+"""
+
 
 @register("infra/repositories.py")
-def _(): return '''from uuid import UUID
+def _():
+    return """from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -257,13 +288,16 @@ class SQLAlchemy{pascal}ReadRepository({pascal}ReadRepository):
         result = await self.session.execute(stmt)
         row = result.one_or_none()
         return {pascal}ReadModel(id=row.id, name=row.name) if row else None
-'''
+"""
+
 
 # ---------------------------------------------------------------------------
 # api
 
+
 @register("api/schemas.py")
-def _(): return '''from uuid import UUID
+def _():
+    return """from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -275,10 +309,12 @@ class Create{pascal}Request(BaseModel):
 class {pascal}Response(BaseModel):
     id: UUID
     name: str
-'''
+"""
+
 
 @register("api/dependencies.py")
-def _(): return '''from fastapi import Depends
+def _():
+    return """from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.{name}.application.commands.create_{name} import Create{pascal}Command
@@ -325,10 +361,12 @@ def get_mediator(
     mediator.register(Create{pascal}Command, create_handler)
     mediator.register(Get{pascal}ByIdQuery, by_id_handler)
     return mediator
-'''
+"""
+
 
 @register("api/router.py")
-def _(): return '''from uuid import UUID
+def _():
+    return """from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -361,7 +399,7 @@ async def get_{name}(
     except {pascal}NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return {pascal}Response(id=result.id, name=result.name)
-'''
+"""
 
 
 def main() -> None:

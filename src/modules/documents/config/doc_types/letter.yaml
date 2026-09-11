@@ -1,12 +1,19 @@
+# src/modules/documents/config/doc_types/letter.yaml
+
 name: "Письмо"
-structure_hint: "адресат -> обращение -> суть -> просьба -> подпись"
+description: "Деловое обращение к другой организации или человеку"
+structure_hint: "адресат -> отправитель -> дата и номер -> тема -> обращение при наличии -> текст -> подпись -> исполнитель при наличии"
+
 requisites:
-  - {key: addressee,  label: "Адресат", required: true}
+  - {key: addressee, label: "Адресат", required: true}
+  - {key: author, label: "Отправитель: организация, должность, ФИО", required: true}
+  - {key: position, label: "Должность отправителя", required: true}
+  - {key: doc_date, label: "Дата документа", required: true}
+  - {key: reg_number, label: "Номер документа", required: true}
+  - {key: subject, label: "Тема", required: true}
+  - {key: signature, label: "Подпись", required: true}
   - {key: salutation, label: "Обращение", required: false}
-  - {key: subject,    label: "Заголовок к тексту", required: true}
-  - {key: author,     label: "Подписант", required: true}
-  - {key: position,   label: "Должность подписанта", required: true}
-  - {key: doc_date,   label: "Дата документа", required: true}
-  - {key: reg_number, label: "Регистрационный номер", required: false}
+  - {key: executor, label: "Исполнитель и телефон", required: false}
+
 auto_fillable:
   doc_date: today

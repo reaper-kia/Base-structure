@@ -1,8 +1,10 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,8 @@ from src.shared.infra.database.session import get_async_session
 from src.shared.infra.redis.client import close_redis_client
 from src.shared.infra.redis.dependencies import get_redis_client
 from src.shared.infra.redis.health import check_redis_connection
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -40,6 +44,26 @@ def create_app() -> FastAPI:
 
     app.include_router(documents_router)
     app.include_router(templates_router)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(
+        request: Request,
+        exc: Exception,
+    ) -> JSONResponse:
+        # Сценарий 6, критерий 3.6: ни одно необработанное исключение не
+        # должно уйти наружу голой 500 со стектрейсом - эксперт должен
+        # увидеть понятный текст, а не traceback. HTTPException (404/409/422
+        # и т.п.) сюда не попадает - для неё у FastAPI свой, более
+        # специфичный обработчик, он всегда имеет приоритет над этим.
+        logger.exception(
+            "Необработанное исключение на %s %s",
+            request.method,
+            request.url.path,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Внутренняя ошибка сервиса"},
+        )
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:

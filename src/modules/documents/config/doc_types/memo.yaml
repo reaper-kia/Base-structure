@@ -1,10 +1,18 @@
+# src/modules/documents/config/doc_types/memo.yaml
+
 name: "Служебная записка"
-structure_hint: "кому -> от кого -> суть -> просьба -> подпись"
+description: "Внутренний документ с просьбой или предложением"
+structure_hint: "адресат -> автор -> дата и номер -> заголовок -> суть -> просьба -> подпись"
+
 requisites:
   - {key: addressee, label: "Адресат", required: true}
-  - {key: author,    label: "Автор",   required: true}
-  - {key: position,  label: "Должность автора", required: true}
-  - {key: subject,   label: "Заголовок к тексту", required: true}
-  - {key: doc_date,  label: "Дата документа", required: true}
+  - {key: author, label: "Автор", required: true}
+  - {key: position, label: "Должность автора", required: true}
+  - {key: doc_date, label: "Дата документа", required: true}
+  - {key: reg_number, label: "Номер документа", required: true}
+  - {key: subject, label: "Заголовок", required: true}
+  - {key: signature, label: "Подпись", required: true}
+  - {key: executor, label: "Исполнитель и телефон", required: false}
+
 auto_fillable:
   doc_date: today

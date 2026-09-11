@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from src.modules.documents.domain.enums import (
@@ -32,10 +32,11 @@ class Document:
     doc_type: DocType = DocType.MEMO
     template_id: str = "classic"
     status: DocumentStatus = DocumentStatus.PROCESSING
-    stage: str | None = ProcessingStage.LLM
+    stage: ProcessingStage | None = ProcessingStage.LLM
     improved_text: str | None = None
     changes: list[dict] = field(default_factory=list)
     requisites: list[Requisite] = field(default_factory=list)
     fact_guard: dict | None = None
+    is_fallback: bool = False
     error: dict | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

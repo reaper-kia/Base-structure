@@ -1,10 +1,15 @@
+# src/modules/documents/config/doc_types/reference.yaml
+
 name: "Информационная справка"
-structure_hint: "заголовок -> период/основание -> изложение сведений -> подпись"
+description: "Документ с фактами и сведениями по определённому вопросу"
+structure_hint: "заголовок -> дата -> сведения -> составитель -> подпись"
+
 requisites:
-  - {key: subject,   label: "Заголовок к тексту", required: true}
-  - {key: author,    label: "Составитель", required: true}
-  - {key: position,  label: "Должность составителя", required: true}
-  - {key: doc_date,  label: "Дата документа", required: true}
-  - {key: reg_number, label: "Регистрационный номер", required: false}
+  - {key: subject, label: "Заголовок", required: true}
+  - {key: doc_date, label: "Дата документа", required: true}
+  - {key: author, label: "Составитель", required: true}
+  - {key: signature, label: "Подпись", required: true}
+  - {key: addressee, label: "Адресат", required: false}
+
 auto_fillable:
   doc_date: today
