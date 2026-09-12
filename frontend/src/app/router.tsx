@@ -9,6 +9,7 @@ import { DocumentPage } from '../pages/document-detail/DocumentPage';
 import { AppShell } from '../widgets/app-shell/AppShell';
 import { PublicLayout } from '../widgets/layout/PublicLayout';
 import { DevPanel } from '../pages/dev/DevPanel';
+import { TracePage } from '../pages/trace/TracePage';
 
 export function AppRouter() {
   return (
@@ -22,6 +23,7 @@ export function AppRouter() {
           <Route path="/wizard" element={<WizardPage />} />
           <Route path="/documents/:id" element={<DocumentPage />} />
           <Route path="/dev" element={<DevPanel />} />
+          <Route path="/trace/:id" element={<TracePage />} />
         </Route>
         <Route path="/login" element={<LoginPage />} />
         <Route

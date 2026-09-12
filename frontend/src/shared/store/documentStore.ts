@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { mockApi } from '../api/mock';
+import { parseContentDisposition } from '../api/contentDisposition';
 import type { DocumentState, DocType, Template, MockScenario, DevState } from '../api/types';
 
 interface WizardState {
@@ -151,13 +152,18 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
     set({ isRendering: true, transportError: null });
     try {
       const result = await mockApi.renderDocument(id);
+      const filename =
+        result.filename ?? parseContentDisposition(null, 'document.docx');
+
       set({ renderFallback: result.fallbackReason, isRendering: false });
 
       const url = URL.createObjectURL(result.blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = result.filename;
+      link.download = filename;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch {
       set({

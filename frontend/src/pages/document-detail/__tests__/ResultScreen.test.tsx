@@ -78,4 +78,16 @@ describe('ResultScreen', () => {
 
     useDocumentStore.setState({ renderFallback: null });
   });
+
+    it('кнопка скачивания видна и активна при processed', () => {
+    render(
+      <MemoryRouter>
+        <ResultScreen document={makeDocument('processed')} />
+      </MemoryRouter>
+    );
+
+    const button = screen.getByText('⬇ Скачать DOCX');
+    expect(button).toBeInTheDocument();
+    expect(button).not.toBeDisabled();
+  });
 });
