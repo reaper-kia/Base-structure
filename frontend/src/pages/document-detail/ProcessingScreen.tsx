@@ -16,7 +16,11 @@ export function ProcessingScreen({ document }: ProcessingScreenProps) {
       }}
     >
       <div className="flex flex-col items-center gap-6 py-4">
-        <div className="relative w-16 h-16">
+        <div
+          className="relative w-16 h-16"
+          role="img"
+          aria-label="Идёт обработка документа"
+        >
           <div
             className="absolute inset-0 rounded-full border-4 border-transparent animate-spin"
             style={{

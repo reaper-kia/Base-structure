@@ -78,7 +78,8 @@ export function DraftInput() {
               <button
                 type="button"
                 onClick={() => setDraft('')}
-                className="text-xs"
+                aria-label="Очистить поле черновика"
+                className="text-xs hover:underline"
                 style={{ color: 'var(--muted-foreground)' }}
               >
                 Очистить
@@ -94,6 +95,7 @@ export function DraftInput() {
           <button
             type="button"
             onClick={handlePaste}
+            aria-label="Вставить текст из буфера обмена"
             className="w-full text-left px-3 py-2.5 text-xs font-semibold transition-all"
             style={{ ...cardStyle, color: 'var(--foreground)' }}
             onMouseEnter={(event) => {

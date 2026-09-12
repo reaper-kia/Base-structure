@@ -20,7 +20,8 @@ export function DocTypeSelector() {
               data-testid={`doc-type-${type.id}`}
               onClick={() => setDocType(type.id)}
               aria-pressed={selected}
-              className="text-left p-3 transition-all"
+              aria-label={`Выбрать тип документа: ${type.name}`}
+              className="text-left p-3 transition-all hover:shadow-md"
               style={{
                 background: selected ? 'var(--primary)' : 'var(--card)',
                 border: selected
@@ -31,6 +32,7 @@ export function DocTypeSelector() {
               }}
             >
               <div
+                aria-hidden="true"
                 className="mb-3 flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
                   background: selected

@@ -69,6 +69,7 @@ export function AppShell() {
         >
           <div className="flex items-center gap-3">
             <div
+              aria-hidden="true"
               className="flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0"
               style={{
                 background: 'rgba(255,255,255,0.18)',
@@ -143,7 +144,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 md:px-6 py-8">
+      <main id="main-content" className="flex-1 max-w-4xl w-full mx-auto px-4 md:px-6 py-8">
         <Outlet />
       </main>
 

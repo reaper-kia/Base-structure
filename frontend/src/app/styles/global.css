@@ -535,6 +535,53 @@ body,
   height: 100%;
 }
 
+/* Видимый фокус для всех интерактивных элементов */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Убираем outline у элементов, которые сами рисуют рамку */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Пропуск к основному содержимому с клавиатуры */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 8px;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: var(--radius);
+  z-index: 1000;
+  text-decoration: none;
+  font-weight: 600;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* Уменьшенная анимация для пользователей с соответствующей настройкой ОС */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--background);

@@ -69,6 +69,14 @@ export function ResultScreen({ document }: ResultScreenProps) {
           type="button"
           disabled={!canDownload || isRendering}
           onClick={() => renderDocument(document.id)}
+          aria-label={
+            !canDownload
+              ? 'Скачивание недоступно: документ не обработан'
+              : isRendering
+                ? 'Формируется DOCX-файл, подождите'
+                : 'Скачать готовый документ в формате DOCX'
+          }
+          aria-busy={isRendering}
           className="flex items-center gap-2.5 px-8 py-3 font-semibold text-sm transition-all"
           style={{
             background:

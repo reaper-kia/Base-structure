@@ -5,6 +5,8 @@ interface PrimaryButtonProps {
   onClick?: () => void;
   disabled?: boolean;
   variant?: 'primary' | 'accent' | 'ghost';
+  'aria-label'?: string;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export function PrimaryButton({
@@ -12,6 +14,8 @@ export function PrimaryButton({
   onClick,
   disabled,
   variant = 'primary',
+  'aria-label': ariaLabel,
+  type = 'button',
 }: PrimaryButtonProps) {
   const background = disabled
     ? 'var(--muted)'
@@ -29,10 +33,12 @@ export function PrimaryButton({
 
   return (
     <button
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={disabled}
-      className="px-7 py-3 text-sm font-semibold transition-all"
+      aria-label={ariaLabel}
+      aria-disabled={disabled}
+      className="px-7 py-3 text-sm font-semibold transition-all hover:brightness-110 active:brightness-95"
       style={{
         background,
         color,

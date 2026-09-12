@@ -28,7 +28,12 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
       disabled={disabled}
       aria-pressed={selected}
       aria-disabled={disabled}
-      className="text-left p-4 transition-all"
+      aria-label={
+        disabled
+          ? `Шаблон ${template.name} недоступен: ${template.description}`
+          : `Выбрать шаблон оформления: ${template.name}`
+      }
+      className="text-left p-4 transition-all hover:shadow-md"
       style={{
         background: selected ? 'var(--primary)' : 'var(--card)',
         border: selected ? '2px solid var(--accent)' : '2px solid var(--border)',
