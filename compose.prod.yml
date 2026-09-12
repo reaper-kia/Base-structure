@@ -199,7 +199,7 @@ services:
 
   ollama:
     mem_limit: 6000m
-    cpus: 2.0
+    cpus: 8.0
     pids_limit: 200
     image: ollama/ollama:latest
     container_name: doc3_ollama
@@ -234,7 +234,7 @@ services:
     environment:
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:7b-instruct
-      OLLAMA_TIMEOUT_SECONDS: "90"
+      OLLAMA_TIMEOUT_SECONDS: "220"
       FALLBACK_ENABLED: "true"
     depends_on:
       ollama:
