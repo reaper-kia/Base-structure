@@ -157,71 +157,7 @@ services:
     restart: unless-stopped
     networks:
       - backend
-    
-  kafka:
-    mem_limit: 1000m
-    cpus: 1
-    pids_limit: 200
-    image: apache/kafka:4.3.0
-    container_name: hackathon_kafka
-    logging: *default-logging
-    environment:
-      KAFKA_LISTENERS: CONTROLLER://localhost:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
-      
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
-      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
-      
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_NUM_PARTITIONS: 3
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-cluster.sh cluster-id --bootstrap-server localhost:9092 >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-    networks:
-      - backend
-  
-  outbox_publisher:
-    mem_limit: 150m
-    cpus: 0.25
-    pids_limit: 100
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-    logging: *default-logging
-    container_name: hackathon_outbox_publisher
-    env_file:
-      - .env.prod
-    depends_on:
-      db:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: python -m src.workers.outbox_publisher
-    restart: unless-stopped
-    
-    read_only: true
-    tmpfs:
-      - /tmp:size=64m,mode=1777
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-         
-    networks:
-        - backend
-  
+
   migrate:
     build:
       context: .
@@ -287,7 +223,8 @@ services:
       dockerfile: ml_service/Dockerfile
     logging: *default-logging
     environment:
-      OLLAMA_URL:_URL: http5:7b-instruct
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_TIMEOUT_SECONDS: "90"
       FALLBACK_ENABLED: "true"
     depends_on:
