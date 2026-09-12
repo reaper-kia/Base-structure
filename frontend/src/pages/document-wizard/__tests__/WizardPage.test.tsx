@@ -1,12 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { WizardPage } from '../WizardPage';
 import { useDocumentStore } from '../../../shared/store/documentStore';
-
-vi.mock('../../../shared/hooks/usePollDocument', () => ({
-  usePollDocument: () => {},
-}));
 
 function renderWizard() {
   return render(
@@ -16,6 +12,10 @@ function renderWizard() {
   );
 }
 
+function goToStep2() {
+  fireEvent.click(screen.getByText(/Далее: выбор типа и шаблона/));
+}
+
 describe('WizardPage', () => {
   beforeEach(() => {
     useDocumentStore.setState({
@@ -23,6 +23,8 @@ describe('WizardPage', () => {
       docType: null,
       templateId: null,
       document: null,
+      isCreating: false,
+      transportError: null,
       docTypes: [
         {
           id: 'memo',
@@ -53,20 +55,27 @@ describe('WizardPage', () => {
           available: false,
         },
       ],
-      isCreating: false,
-      transportError: null,
     });
   });
 
-  it('кнопка "Создать" неактивна без типа', () => {
-    useDocumentStore.setState({ draft: 'Текст', templateId: 'classic' });
+  it('кнопка «Далее» неактивна без текста', () => {
     renderWizard();
 
-    expect(screen.getByText(/Создать документ/)).toBeDisabled();
+    expect(screen.getByText(/Далее: выбор типа и шаблона/)).toBeDisabled();
+  });
+
+  it('на шаге 2 запуск неактивен без шаблона', () => {
+    useDocumentStore.setState({ draft: 'Текст черновика достаточной длины' });
+    renderWizard();
+    goToStep2();
+
+    expect(screen.getByText(/Запустить обработку/)).toBeDisabled();
   });
 
   it('недоступный шаблон нельзя выбрать', () => {
+    useDocumentStore.setState({ draft: 'Текст черновика достаточной длины' });
     renderWizard();
+    goToStep2();
 
     const card = screen.getByTestId('template-broken');
     expect(card).toBeDisabled();
@@ -74,7 +83,9 @@ describe('WizardPage', () => {
   });
 
   it('порядок типов совпадает с порядком из API', () => {
+    useDocumentStore.setState({ draft: 'Текст черновика достаточной длины' });
     renderWizard();
+    goToStep2();
 
     const cards = screen.getAllByTestId(/^doc-type-/);
     expect(cards[0]).toHaveTextContent('Служебная записка');

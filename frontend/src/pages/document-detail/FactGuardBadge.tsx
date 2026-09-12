@@ -1,47 +1,77 @@
 import type { FactGuard } from '../../shared/api/types';
 
-const VERDICT_STYLES = {
-  clean: { bg: '#d1fae5', border: '#a7f3d0', color: '#065f46' },
-  warning: { bg: '#fef3c7', border: '#fde68a', color: '#92400e' },
-  blocked: { bg: '#fee2e2', border: '#fca5a5', color: '#7f1d1d' },
-} as const;
-
 interface FactGuardBadgeProps {
   factGuard: FactGuard | null;
 }
 
 export function FactGuardBadge({ factGuard }: FactGuardBadgeProps) {
-  if (!factGuard) return null;
+  if (!factGuard) {
+    return null;
+  }
 
-  const style = VERDICT_STYLES[factGuard.verdict];
+  const total = factGuard.source_count;
+
+  if (total === 0) {
+    return (
+      <section
+        aria-label="Fact Guard"
+        className="p-3 md:p-4"
+        style={{
+          background: 'var(--muted)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+        }}
+      >
+        <div className="flex items-start gap-2">
+          <span aria-hidden="true" className="flex-shrink-0 text-base">
+            —
+          </span>
+          <div>
+            <div
+              className="text-sm font-semibold"
+              style={{ color: 'var(--foreground)' }}
+            >
+              Проверенные значения: проверка не выполнялась
+            </div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+              В тексте не найдено дат, сумм и других проверяемых фактов.
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const lost = factGuard.lost;
+  const isSuccess = lost.length === 0;
 
   return (
     <section
+      aria-label="Fact Guard"
       className="p-3 md:p-4"
       style={{
-        background: style.bg,
-        border: `1px solid ${style.border}`,
+        background: isSuccess ? 'var(--chip-found-bg)' : 'var(--chip-missing-bg)',
+        border: `1px solid ${
+          isSuccess ? 'var(--chip-found-border)' : 'var(--chip-missing-border)'
+        }`,
         borderRadius: 'var(--radius)',
-        color: style.color,
+        color: isSuccess ? 'var(--chip-found-text)' : 'var(--chip-missing-text)',
       }}
-      aria-label="Fact Guard"
     >
-      <div className="text-sm font-semibold">
-        Fact Guard: Сохранено {factGuard.preserved_count} из{' '}
-        {factGuard.source_count} фактов · Добавлено {factGuard.added.length}
+      <div className="flex items-start gap-2">
+        <span aria-hidden="true" className="flex-shrink-0 text-base font-bold">
+          {isSuccess ? '✓' : '⚠'}
+        </span>
+        <div>
+          <div className="text-sm font-semibold">
+            Проверенные значения: сохранено {factGuard.preserved_count} из {total}
+            {lost.length > 0 && ` · потеряно ${lost.length}`}
+          </div>
+          {lost.length > 0 && (
+            <div className="text-xs mt-1">Из текста пропало: {lost.join(', ')}</div>
+          )}
+        </div>
       </div>
-
-      {factGuard.verdict === 'warning' && factGuard.lost.length > 0 && (
-        <div className="text-xs mt-1">
-          Из текста пропало: {factGuard.lost.join(', ')}
-        </div>
-      )}
-
-      {factGuard.verdict === 'blocked' && (
-        <div className="text-xs mt-1">
-          Обнаружены факты, которых не было в исходном черновике.
-        </div>
-      )}
     </section>
   );
 }

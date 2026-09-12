@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FactGuardBadge } from '../FactGuardBadge';
 
@@ -18,7 +18,7 @@ describe('FactGuardBadge', () => {
     );
 
     expect(
-      screen.getByText('Fact Guard: Сохранено 2 из 2 фактов · Добавлено 0')
+      screen.getByText(/Проверенные значения: сохранено 2 из 2/)
     ).toBeInTheDocument();
   });
 
@@ -37,5 +37,25 @@ describe('FactGuardBadge', () => {
     );
 
     expect(screen.getByText('Из текста пропало: 50 000 руб.')).toBeInTheDocument();
+  });
+
+  it('при нуле якорей объясняет, что проверка не выполнялась', () => {
+    render(
+      <FactGuardBadge
+        factGuard={{
+          verdict: 'clean',
+          preserved: [],
+          lost: [],
+          added: [],
+          source_count: 0,
+          preserved_count: 0,
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText(/Проверенные значения: проверка не выполнялась/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/сохранено 0 из 0/i)).not.toBeInTheDocument();
   });
 });

@@ -5,38 +5,34 @@ import { useDocumentStore } from '../../../shared/store/documentStore';
 
 describe('DraftInput', () => {
   beforeEach(() => {
-    useDocumentStore.setState({
-      draft: '',
-      setDraft: (value: string) => useDocumentStore.setState({ draft: value }),
-    });
+    useDocumentStore.setState({ draft: '', docType: null });
   });
 
   it('счётчик обновляется при вводе', () => {
-    render(<DraftInput />);
-    const textarea = screen.getByLabelText('Черновик документа');
+    render(<DraftInput onNext={() => {}} />);
+    const textarea = screen.getByLabelText('Текст черновика');
 
     fireEvent.change(textarea, { target: { value: 'Привет мир' } });
 
-    expect(screen.getByText(/10 \/ 20000 символов/)).toBeTruthy();
+    expect(screen.getByText('10 / 20000 символов')).toBeInTheDocument();
   });
 
   it('демо-кнопка заполняет textarea', () => {
-    render(<DraftInput />);
-    const demoButton = screen.getByText('Чистый черновик');
+    render(<DraftInput onNext={() => {}} />);
 
-    fireEvent.click(demoButton);
+    fireEvent.click(screen.getByText('Заявление на отпуск'));
 
-    const textarea = screen.getByLabelText('Черновик документа') as HTMLTextAreaElement;
+    const textarea = screen.getByLabelText('Текст черновика') as HTMLTextAreaElement;
     expect(textarea.value.length).toBeGreaterThan(100);
   });
 
-  it('показывает предупреждение о превышении лимита', () => {
-    const longText = 'a'.repeat(20001);
-    useDocumentStore.setState({ draft: longText });
+  it('ввод длиннее лимита обрезается до 20000 символов', () => {
+    render(<DraftInput onNext={() => {}} />);
+    const textarea = screen.getByLabelText('Текст черновика');
 
-    render(<DraftInput />);
+    fireEvent.change(textarea, { target: { value: 'а'.repeat(20001) } });
 
-    // Ищем текст, который содержит "превышен лимит" (часть составной строки)
-    expect(screen.getByText(/превышен лимит/i)).toBeTruthy();
+    expect((textarea as HTMLTextAreaElement).value).toHaveLength(20000);
+    expect(screen.getByText('20000 / 20000 символов')).toBeInTheDocument();
   });
 });
