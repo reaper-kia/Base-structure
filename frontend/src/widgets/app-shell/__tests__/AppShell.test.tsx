@@ -20,6 +20,12 @@ describe('AppShell', () => {
     expect(skipLink).toHaveAttribute('href', '#main-content');
   });
 
+  it('верхняя панель закреплена при прокрутке', () => {
+    renderShell();
+
+    expect(screen.getByTestId('top-bar')).toHaveClass('sticky');
+  });
+
   it('основная область имеет id для skip-link', () => {
     renderShell();
 

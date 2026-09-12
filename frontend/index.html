@@ -7,6 +7,24 @@
     <meta name="description" content="ИИ-конструктор служебных документов: исправляет текст, проверяет реквизиты и формирует готовый .docx по ГОСТ" />
     <meta name="theme-color" content="#0B3D9E" />
     <title>Документ за 3 шага — ИИ-конструктор служебных документов</title>
+
+    <script>
+      // Ставим тему до загрузки React, чтобы не мигать и не сбрасываться
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          if (stored === 'dark' || stored === 'light') {
+            document.documentElement.setAttribute('data-theme', stored);
+          } else if (
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches
+          ) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    
   </head>
   <body>
     <div id="root"></div>

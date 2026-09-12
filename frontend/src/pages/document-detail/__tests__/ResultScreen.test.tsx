@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ResultScreen } from '../ResultScreen';
 import { useDocumentStore } from '../../../shared/store/documentStore';
@@ -61,9 +61,11 @@ describe('ResultScreen', () => {
     );
   });
 
-    it('показывает плашку запасного шаблона уровнем информация', () => {
-    useDocumentStore.setState({
-      renderFallback: 'Шаблон «modern» повреждён, применён «classic»',
+  it('показывает плашку запасного шаблона уровнем информация', () => {
+    act(() => {
+      useDocumentStore.setState({
+        renderFallback: 'Шаблон «modern» повреждён, применён «classic»',
+      });
     });
 
     render(
@@ -76,7 +78,9 @@ describe('ResultScreen', () => {
       screen.getByText('Шаблон «modern» повреждён, применён «classic»')
     ).toBeInTheDocument();
 
-    useDocumentStore.setState({ renderFallback: null });
+    act(() => {
+      useDocumentStore.setState({ renderFallback: null });
+    });
   });
 
     it('кнопка скачивания видна и активна при processed', () => {

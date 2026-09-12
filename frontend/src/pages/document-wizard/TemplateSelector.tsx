@@ -3,8 +3,8 @@ import { FieldLabel } from '../../shared/ui/FieldLabel';
 import type { Template } from '../../shared/api/types';
 
 const TEMPLATE_META: Record<string, { font: string; accent: string }> = {
-  classic: { font: 'Times New Roman', accent: '#1a1a1a' },
-  modern: { font: 'Calibri', accent: '#0B4FCA' },
+  classic: { font: 'Times New Roman', accent: 'var(--tpl-accent-ink)' },
+  modern: { font: 'Calibri', accent: 'var(--tpl-accent-blue)' },
 };
 
 interface TemplateCardProps {
@@ -16,7 +16,7 @@ interface TemplateCardProps {
 function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
   const meta = TEMPLATE_META[template.id] ?? {
     font: 'Times New Roman',
-    accent: '#1a1a1a',
+    accent: 'var(--tpl-accent-ink)',
   };
   const disabled = !template.available;
 
@@ -73,7 +73,7 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
               style={{
                 background: selected
                   ? 'rgba(255,255,255,0.25)'
-                  : 'var(--border)',
+                  : 'var(--tpl-preview-line)',
                 width,
               }}
             />
@@ -83,7 +83,7 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
             style={{
               background: selected
                 ? 'rgba(255,255,255,0.15)'
-                : 'var(--border)',
+                : 'var(--tpl-preview-line)',
             }}
           />
           {['100%', '85%', '70%'].map((width, index) => (
@@ -93,7 +93,7 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
               style={{
                 background: selected
                   ? 'rgba(255,255,255,0.18)'
-                  : 'var(--secondary)',
+                  : 'var(--tpl-preview-line-soft)',
                 width,
               }}
             />
@@ -105,7 +105,10 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
         <div>
           <div
             className="text-sm font-semibold"
-            style={{ fontFamily: 'var(--font-serif)' }}
+            style={{
+              fontFamily: 'var(--font-serif)',
+              color: selected ? '#fff' : 'var(--foreground)',
+            }}
           >
             {template.name}
           </div>

@@ -77,6 +77,21 @@
   --banner-error-bg: #fee2e2;
   --banner-error-border: #fca5a5;
   --banner-error-text: #7f1d1d;
+  --header-gradient: linear-gradient(to bottom, #0b3d9e, #2a8fd4);
+  --header-bar-bg: rgba(11, 61, 158, 0.92);
+  --header-bar-fade: rgba(11, 61, 158, 0.55);
+  --header-shadow: 0 6px 24px rgba(11, 61, 158, 0.12);
+  --header-on: #ffffff;
+  --header-on-muted: rgba(255, 255, 255, 0.55);
+  --header-on-soft: rgba(255, 255, 255, 0.9);
+  --header-on-faint: rgba(255, 255, 255, 0.35);
+  --header-overlay: rgba(255, 255, 255, 0.15);
+  --header-overlay-border: rgba(255, 255, 255, 0.25);
+  --header-line: rgba(255, 255, 255, 0.12);
+  --tpl-accent-ink: #1a1a1a;
+  --tpl-accent-blue: #0b4fca;
+  --tpl-preview-line: #cdd6ee;
+  --tpl-preview-line-soft: #dfe6f6;
 }
 
 :root[data-theme="dark"] {
@@ -93,6 +108,21 @@
   --cream: #f1ddc4;
   --sage: #9ba596;
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+  --header-gradient: linear-gradient(165deg, #0a1024 0%, #132c5e 55%, #0e4a77 100%);
+  --header-bar-bg: rgba(7, 10, 22, 0.92);
+  --header-bar-fade: rgba(7, 10, 22, 0.65);
+  --header-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  --header-on: #e8ecf6;
+  --header-on-muted: rgba(232, 236, 246, 0.55);
+  --header-on-soft: rgba(232, 236, 246, 0.9);
+  --header-on-faint: rgba(232, 236, 246, 0.35);
+  --header-overlay: rgba(232, 236, 246, 0.1);
+  --header-overlay-border: rgba(232, 236, 246, 0.2);
+  --header-line: rgba(232, 236, 246, 0.12);
+  --tpl-accent-ink: #e8ecf6;
+  --tpl-accent-blue: #7fb0ff;
+  --tpl-preview-line: #46536f;
+  --tpl-preview-line-soft: #38445d;
 }
 
 * { box-sizing: border-box; }
@@ -633,4 +663,17 @@ body {
   --banner-error-bg: #331214;
   --banner-error-border: #fca5a5;
   --banner-error-text: #fecaca;
+}
+
+/* Мягкое растворение нижнего края липкой панели.
+   Нависает поверх контента, не занимает место в потоке. */
+.top-bar::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 36px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--header-bar-fade), transparent);
 }
