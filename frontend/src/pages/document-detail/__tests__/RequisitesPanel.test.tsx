@@ -96,4 +96,29 @@ describe('RequisitesPanel', () => {
       expect(mockOnPatch).toHaveBeenCalledWith({ position: null });
     });
   });
+
+  it('ошибка PATCH не стирает локальный ввод', async () => {
+    const mockOnPatch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    render(
+      <RequisitesPanel
+        requisites={mockRequisites}
+        onPatch={mockOnPatch}
+        isPatching={false}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Указать'));
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Менеджер' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(mockOnPatch).toHaveBeenCalledWith({ position: 'Менеджер' });
+    });
+
+    // После ошибки ввод остаётся в редакторе, а не стирается
+    expect(screen.getByRole('textbox')).toHaveValue('Менеджер');
+  });
 });

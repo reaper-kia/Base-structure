@@ -57,6 +57,44 @@ describe('buildFinalDocumentText', () => {
     expect(buildFinalDocumentText(doc)).toContain('[Адресат]');
   });
 
+  it('адресат из панели появляется в итоговом тексте', () => {
+    const doc = makeDoc(
+      [
+        {
+          key: 'addressee',
+          label: 'Адресат',
+          value: 'Директору ООО «Ромашка» Петрову П.П.',
+          status: 'user_provided',
+          required: true,
+        },
+      ],
+      'Текст без адресата'
+    );
+
+    const result = buildFinalDocumentText(doc);
+
+    expect(result).toContain('Директору ООО «Ромашка» Петрову П.П.');
+  });
+
+  it('пустой адресат превращается в [Адресат]', () => {
+    const doc = makeDoc(
+      [
+        {
+          key: 'addressee',
+          label: 'Адресат',
+          value: null,
+          status: 'left_blank',
+          required: true,
+        },
+      ],
+      'Текст без адресата'
+    );
+
+    const result = buildFinalDocumentText(doc);
+
+    expect(result).toContain('[Адресат]');
+  });
+
   it('заменяет строку авторства значением пользователя', () => {
     const doc = makeDoc(
       [

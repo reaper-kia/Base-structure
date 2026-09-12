@@ -21,8 +21,13 @@ export function RequisitesPanel({
   };
 
   const handleSave = async (key: string, value: string | null) => {
-    await onPatch({ [key]: value });
-    setEditingKey(null);
+    try {
+      await onPatch({ [key]: value });
+      setEditingKey(null);
+    } catch {
+      // При ошибке PATCH не закрываем редактор — пользователь может
+      // попробовать ещё раз или отменить вручную
+    }
   };
 
   const handleCancel = () => {
