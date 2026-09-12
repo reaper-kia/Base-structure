@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, String, Text
@@ -20,27 +21,27 @@ class DocumentModel(Base):
     template_id: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32))
 
-    stage: Mapped[str | None] = mapped_column(
+    stage: Mapped[Optional[str]] = mapped_column(
         String(32),
         nullable=True,
     )
 
-    improved_text: Mapped[str | None] = mapped_column(
+    improved_text: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
     )
 
-    changes: Mapped[list | None] = mapped_column(
+    changes: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
     )
 
-    requisites: Mapped[list | None] = mapped_column(
+    requisites: Mapped[Optional[list]] = mapped_column(
         JSON,
         nullable=True,
     )
 
-    fact_guard: Mapped[dict | None] = mapped_column(
+    fact_guard: Mapped[Optional[dict]] = mapped_column(
         JSON,
         nullable=True,
     )
@@ -50,7 +51,7 @@ class DocumentModel(Base):
         default=False,
     )
 
-    error: Mapped[dict | None] = mapped_column(
+    error: Mapped[Optional[dict]] = mapped_column(
         JSON,
         nullable=True,
     )
@@ -58,4 +59,9 @@ class DocumentModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
+    )
+
+    deadline: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )

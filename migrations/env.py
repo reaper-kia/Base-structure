@@ -12,7 +12,6 @@ from src.shared.infra.database.base import Base
 # ВАЖНО: каждую новую ORM-модель надо импортировать здесь,
 # иначе Alembic её не увидит и autogenerate пропустит таблицу.
 from src.modules.documents.infra.models import DocumentModel
-from src.shared.outbox.infra.models import OutboxMessageModel
 
 config = context.config
 

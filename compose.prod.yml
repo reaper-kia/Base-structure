@@ -16,6 +16,8 @@ services:
     container_name: hackathon_app
     env_file:
       - .env.prod
+    environment:
+      ML_SERVICE_URL: http://ml_service:8100
     depends_on:
       db: 
         condition: service_healthy
@@ -23,6 +25,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      ml_service:
+        condition: service_healthy
     command:
       - uvicorn
       - src.main:app
@@ -76,6 +80,8 @@ services:
     depends_on:
       app:
         condition: service_healthy
+      stt_service:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/nginx-health"]
@@ -85,7 +91,33 @@ services:
       start_period: 5s
     networks:
       - edge
+      - speech
 
+  stt_service:
+    mem_limit: 500m
+    cpus: 1.0
+    pids_limit: 100
+    build:
+      context: ./stt-service
+      dockerfile: Dockerfile
+    logging: *default-logging
+    container_name: hackathon_stt
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8200/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - speech
 
   db:
     mem_limit: 350m
@@ -225,14 +257,62 @@ services:
     networks:
       - backend
 
+  ollama:
+    mem_limit: 6000m
+    cpus: 2.0
+    pids_limit: 200
+    image: ollama/ollama:latest
+    container_name: hackathon_ollama
+    logging: *default-logging
+    volumes:
+      - prod_ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - backend
+
+  ml_service:
+    mem_limit: 500m
+    cpus: 0.5
+    pids_limit: 100
+    build:
+      context: .
+      dockerfile: ml_service/Dockerfile
+    logging: *default-logging
+    environment:
+      OLLAMA_URL:_URL: http5:7b-instruct
+      OLLAMA_TIMEOUT_SECONDS: "90"
+      FALLBACK_ENABLED: "true"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health/model', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - backend
 
 networks:
   edge:
     driver: bridge
-  
   backend:
     driver: bridge
+  speech:
+    driver: bridge
+    internal: true
 
 volumes:
   prod_postgres_data:
   prod_redis_data:
+  prod_ollama_models:  # <-- НОВЫЙ ТОМ ДЛЯ ВЕСОВ МОДЕЛИ

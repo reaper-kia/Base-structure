@@ -1,7 +1,7 @@
 """HTTP-клиент в ml_service.
 
 Любая сетевая проблема (включая кривой ответ без нужных ключей) превращается
-в LLMUnavailable - выше по стеку её ловит хэндлер и включает деградацию
+в LLMUnavailable — выше по стеку её ловит хэндлер и включает деградацию
 вместо падения фонового таска.
 """
 
@@ -15,6 +15,11 @@ from src.modules.documents.domain.exceptions import LLMUnavailable
 
 
 class HttpLLMClient:
+    def __init__(self, ai_force_failure: bool = False):
+        # Флаг имитации отказа передаётся извне (из сессии эксперта),
+        # а не читается из глобальных settings — см. TL-14.
+        self._ai_force_failure = ai_force_failure
+
     async def process(
         self,
         *,
@@ -24,7 +29,7 @@ class HttpLLMClient:
         structure_hint: str,
         requisite_keys: list[str],
     ) -> LLMResult:
-        if settings.ai_force_failure or not settings.ml_service_url:
+        if self._ai_force_failure or not settings.ml_service_url:
             raise LLMUnavailable("ИИ-компонент отключён")
 
         try:
@@ -51,9 +56,7 @@ class HttpLLMClient:
                 changes=payload.get("changes", []),
                 fact_guard=payload.get("fact_guard", {}),
                 is_fallback=payload.get("is_fallback", False),
+                model_version=payload.get("model_version", "unknown"),
             )
         except Exception as exc:  # noqa: BLE001
-            # Сюда же попадает кривой JSON без "improved_text"/"requisites" -
-            # раньше KeyError на сборке LLMResult вылетал уже за пределами
-            # try/except и ронял фоновый таск вместо честного LLMUnavailable.
             raise LLMUnavailable(str(exc)) from exc

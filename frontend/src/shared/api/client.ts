@@ -6,9 +6,12 @@ const statusMessages: Record<number, string> = {
   403: 'Недостаточно прав',
   404: 'Данные не найдены',
   409: 'Конфликт данных',
+  413: 'Аудиозапись слишком большая',
   422: 'Проверьте заполненные поля',
   429: 'Слишком много запросов. Попробуйте позже',
   500: 'Сервис временно недоступен',
+  502: 'Сервис распознавания речи недоступен',
+  503: 'Сервис распознавания речи временно недоступен',
 };
 
 export class ApiError extends Error {
@@ -45,12 +48,13 @@ function extractMessage(payload: unknown, status: number): string {
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const hasBody = options.body !== undefined;
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
     },
   });
@@ -69,6 +73,8 @@ export const apiClient = {
     request<T>(endpoint, { method: 'GET', signal }),
   post: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+  postForm: <T>(endpoint: string, body: FormData, signal?: AbortSignal) =>
+    request<T>(endpoint, { method: 'POST', body, signal }),
   patch: <T>(endpoint: string, body?: unknown) =>
     request<T>(endpoint, {
       method: 'PATCH',

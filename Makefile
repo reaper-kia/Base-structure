@@ -1,4 +1,4 @@
-.PHONY: up up-events down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert ml-test pull-model models
+.PHONY: up down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert ml-test pull-model models smoke smoke-prod
 
 OLLAMA_MODEL ?= qwen2.5:7b-instruct
 
@@ -22,10 +22,6 @@ downgrade:
 
 up:
 	docker compose up --build -d
-
-# С Kafka и воркерами (медленнее на старте)
-up-events:
-	docker compose --profile events up --build -d
 
 down:
 	docker compose down
@@ -52,6 +48,7 @@ shell:
 db-shell:
 	docker compose exec db sh -c \
 		'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
+
 test:
 	docker compose exec app pytest
 
@@ -71,7 +68,17 @@ cert:
 		-days 365 \
 		-config certs/openssl.cnf
 
-
 # Тесты ML-сервиса (у него свои зависимости и свой pytest)
 ml-test:
 	cd ml_service && pytest
+
+# End-to-end smoke-тест: создать документ → дождаться → скачать DOCX
+smoke:
+	@API_URL=http://localhost:8000 bash scripts/smoke.sh
+
+smoke-prod:
+	@if [ -z "$(PROD_URL)" ]; then \
+		echo "Usage: make smoke-prod PROD_URL=https://your-stand.com"; \
+		exit 1; \
+	fi
+	@API_URL=$(PROD_URL) bash scripts/smoke.sh

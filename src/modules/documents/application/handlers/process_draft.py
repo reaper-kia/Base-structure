@@ -1,21 +1,21 @@
-"""TL-04/TL-06: оркестратор пайплайна обработки черновика.
+"""Оркестратор пайплайна обработки черновика.
 
-Реальная последовательность llm -> fact_guard -> validation (вместо
-временной заглушки TL-03, которая просто ждала и копировала draft).
-Кэш повторных запросов и клиент ИИ приходят снаружи (см. api/router.py) -
-этот модуль знает только про их протоколы (LLMClient, JsonCache), не про
-конкретные HTTP/Redis реализации.
+Кэш повторных запросов учитывает версию промпта, обходит кэш при явном
+повторе и не кэширует надолго резервные (неуспешные) результаты.
 
-TL-06: любое неожиданное исключение внутри пайплайна (не только
-LLMUnavailable) переводит документ в failed вместо того, чтобы молча
-уронить фоновый таск - сценарий 6, "исключение в пайплайне -> status=failed,
-приложение живо".
+Каждая попытка обработки пишется в журнал отдельно (по attempt_id),
+с таймингами стадий, версиями модели/промпта и признаком попадания в кэш.
+
+Имитация отказа ИИ (TL-14) фиксируется в метаданных попытки, чтобы её
+можно было отличить от реальной поломки.
 """
 
 import hashlib
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import asdict
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from src.core.config import settings
@@ -65,9 +65,17 @@ async def _change_document(
 
 
 def _cache_key(draft: str, doc_type: str) -> str:
-    # Формула из contracts/llm_contract.md §4.3: key = sha256(draft + doc_type).
-    digest = hashlib.sha256(f"{draft}{doc_type}".encode()).hexdigest()
+    payload = f"{draft}{doc_type}{settings.prompt_version}"
+    digest = hashlib.sha256(payload.encode()).hexdigest()
     return f"llm:{digest}"
+
+
+def _draft_fingerprint(draft: str) -> dict:
+    """Обезличенный отпечаток входа для журнала: хеш и длина."""
+    return {
+        "sha256": hashlib.sha256(draft.encode()).hexdigest(),
+        "length": len(draft),
+    }
 
 
 async def _mark_failed(
@@ -80,6 +88,7 @@ async def _mark_failed(
     def mark_failed(doc: Document) -> None:
         doc.status = DocumentStatus.FAILED
         doc.stage = None
+        doc.deadline = None
         doc.error = {
             "code": code,
             "message": message,
@@ -95,19 +104,35 @@ async def run(
     *,
     llm_client: LLMClient,
     cache: JsonCache,
+    bypass_cache: bool = False,
+    ai_force_failure: bool = False,
 ) -> None:
-    """llm -> fact_guard -> validation.
-
-    draft не перезаписывается ни на одном шаге - это прямое требование
-    сценария 6 ("сервис не теряет введённый пользователем текст").
-    """
+    """llm -> fact_guard -> validation."""
 
     def start(doc: Document) -> None:
         doc.status = DocumentStatus.PROCESSING
         doc.stage = ProcessingStage.LLM
         doc.error = None
+        now = datetime.now(UTC)
+        doc.started_at = now
+        doc.deadline = now + timedelta(
+            seconds=settings.processing_deadline_seconds
+        )
 
     document = await _change_document(document_id, uow_factory, start)
+
+    attempt_id = trace_store.start_attempt(
+        document_id,
+        meta={
+            "input": _draft_fingerprint(document.draft),
+            "doc_type": document.doc_type.value,
+            "template_id": document.template_id,
+            "prompt_version": settings.prompt_version,
+            "bypass_cache": bypass_cache,
+            # TL-14: помечаем, что попытка запущена с имитацией отказа.
+            "ai_force_failure": ai_force_failure,
+        },
+    )
 
     try:
         spec = get_doc_type(document.doc_type.value)
@@ -115,8 +140,10 @@ async def run(
 
         trace_store.record(
             document_id,
+            attempt_id,
             "llm_request",
             {
+                "draft": document.draft,
                 "doc_type": document.doc_type.value,
                 "doc_type_name": spec.name,
                 "structure_hint": spec.structure_hint,
@@ -125,11 +152,23 @@ async def run(
         )
 
         cache_key = _cache_key(document.draft, document.doc_type.value)
-        cached_payload = await cache.get_json(cache_key)
+        cached_payload = None
+
+        if not bypass_cache:
+            cached_payload = await cache.get_json(cache_key)
+
+        llm_duration_ms: float | None = None
 
         if cached_payload is not None:
             result = LLMResult(**cached_payload)
+            trace_store.record(
+                document_id,
+                attempt_id,
+                "cache_hit",
+                {"cache_key": cache_key, "cache_hit": True},
+            )
         else:
+            llm_started = time.perf_counter()
             try:
                 result = await llm_client.process(
                     draft=document.draft,
@@ -139,6 +178,22 @@ async def run(
                     requisite_keys=requisite_keys,
                 )
             except LLMUnavailable as exc:
+                llm_duration_ms = (time.perf_counter() - llm_started) * 1000
+                trace_store.record(
+                    document_id,
+                    attempt_id,
+                    "llm_error",
+                    {
+                        "detail": str(exc),
+                        # TL-14: отказ помечен как имитация, чтобы не
+                        # спутать демо с реальной поломкой.
+                        "simulated": ai_force_failure,
+                    },
+                    duration_ms=round(llm_duration_ms, 2),
+                )
+                trace_store.finish_attempt(
+                    document_id, attempt_id, outcome="failed"
+                )
                 await _mark_failed(
                     document_id,
                     uow_factory,
@@ -148,20 +203,42 @@ async def run(
                         "попробуйте ещё раз."
                     ),
                 )
-                trace_store.record(document_id, "llm_error", {"detail": str(exc)})
                 return
 
-            # Недоступность Redis не должна ломать обработку - JsonCache-
-            # адаптеры (RedisJsonCache) сами глотают свои ошибки и
-            # возвращают False/None, так что set_json здесь ничего не
-            # проверяет и не падает.
+            llm_duration_ms = (time.perf_counter() - llm_started) * 1000
+
+            ttl = (
+                settings.fallback_cache_ttl_seconds
+                if result.is_fallback
+                else settings.cache_ttl_seconds
+            )
             await cache.set_json(
                 cache_key,
                 asdict(result),
-                ttl_seconds=settings.cache_ttl_seconds,
+                ttl_seconds=ttl,
+            )
+            trace_store.record(
+                document_id,
+                attempt_id,
+                "cache_miss",
+                {"cache_key": cache_key, "cache_hit": False},
             )
 
-        trace_store.record(document_id, "llm_raw", asdict(result))
+        trace_store.update_attempt_meta(
+            document_id, attempt_id, model_version=result.model_version
+        )
+
+        trace_store.record(
+            document_id,
+            attempt_id,
+            "llm_result",
+            asdict(result),
+            duration_ms=(
+                round(llm_duration_ms, 2)
+                if llm_duration_ms is not None
+                else None
+            ),
+        )
 
         await _change_document(
             document_id,
@@ -169,7 +246,9 @@ async def run(
             lambda doc: setattr(doc, "stage", ProcessingStage.FACT_GUARD),
         )
 
-        trace_store.record(document_id, "fact_guard", result.fact_guard)
+        trace_store.record(
+            document_id, attempt_id, "fact_guard", result.fact_guard
+        )
 
         await _change_document(
             document_id,
@@ -185,6 +264,7 @@ async def run(
 
         trace_store.record(
             document_id,
+            attempt_id,
             "validation",
             {
                 "missing": [
@@ -201,7 +281,6 @@ async def run(
         )
 
         def finish(doc: Document) -> None:
-            # draft не перезаписываем.
             doc.requisites = validated_requisites
             doc.improved_text = result.improved_text
             doc.changes = result.changes
@@ -213,21 +292,33 @@ async def run(
                 else DocumentStatus.PROCESSED
             )
             doc.stage = None
+            doc.deadline = None
 
         await _change_document(document_id, uow_factory, finish)
 
+        trace_store.finish_attempt(
+            document_id,
+            attempt_id,
+            outcome="degraded" if result.is_fallback else "processed",
+        )
+
     except DocumentNotFound:
-        # Документ исчез посреди обработки - пометить нечего, просто не
-        # роняем фоновый таск наружу необработанным.
         raise
     except Exception as exc:  # noqa: BLE001
         logger.exception("Пайплайн обработки документа %s упал", document_id)
+        trace_store.record(
+            document_id,
+            attempt_id,
+            "pipeline_error",
+            {"detail": str(exc)},
+        )
+        trace_store.finish_attempt(document_id, attempt_id, outcome="failed")
         await _mark_failed(
             document_id,
             uow_factory,
             code="internal",
             message=(
-                "Внутренняя ошибка обработки. Черновик сохранён, попробуйте ещё раз."
+                "Внутренняя ошибка обработки. Черновик сохранён, "
+                "попробуйте ещё раз."
             ),
         )
-        trace_store.record(document_id, "pipeline_error", {"detail": str(exc)})

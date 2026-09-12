@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Optional
 from uuid import UUID, uuid4
 
 from src.modules.documents.domain.enums import (
@@ -14,7 +15,7 @@ from src.modules.documents.domain.enums import (
 class Requisite:
     key: str
     label: str
-    value: str | None
+    value: Optional[str]
     status: RequisiteStatus
     required: bool
 
@@ -32,11 +33,13 @@ class Document:
     doc_type: DocType = DocType.MEMO
     template_id: str = "classic"
     status: DocumentStatus = DocumentStatus.PROCESSING
-    stage: ProcessingStage | None = ProcessingStage.LLM
-    improved_text: str | None = None
-    changes: list[dict] = field(default_factory=list)
-    requisites: list[Requisite] = field(default_factory=list)
-    fact_guard: dict | None = None
+    stage: Optional[ProcessingStage] = ProcessingStage.LLM
+    improved_text: Optional[str] = None
+    changes: list = field(default_factory=list)
+    requisites: list = field(default_factory=list)
+    fact_guard: Optional[dict] = None
     is_fallback: bool = False
-    error: dict | None = None
+    error: Optional[dict] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    started_at: Optional[datetime] = None
+    deadline: Optional[datetime] = None

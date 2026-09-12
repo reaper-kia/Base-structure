@@ -7,19 +7,25 @@
 
 ---
 
+# Doc3 — ИИ-помощник делопроизводителя
+
+Сервис принимает черновик делового документа на естественном языке,
+исправляет орфографию, пунктуацию и стиль, извлекает реквизиты,
+проверяет сохранность фактов и формирует готовый DOCX по выбранному шаблону оформления.
+
+Модель работает **локально** (Ollama + qwen2.5:7b-instruct), без внешних API.
+
+---
+
 ## Быстрый старт
 
 ```bash
 cp .env.example .env
-# Необязательно: отдельные настройки ML-сервиса.
-# Без этого файла сервис запустится со значениями по умолчанию.
-cp ml_service/.env.example ml_service/.env
-# подставь секреты:
-# python -c "import secrets; print(secrets.token_urlsafe(64))"
 
-make up          # app + db + redis + frontend + migrate + ml_service
-make admin       # создать первого администратора
-```
+make up              # app + db + redis + frontend + ollama + ml_service
+make pull-model      # ⚠️ скачать веса модели (~5 ГБ, один раз)
+make migrate         # применить миграции
+make smoke           # end-to-end проверка: создать документ → дождаться → скачать DOCX
 
 - Backend: http://localhost:8000 — Swagger на `/docs`
 - Frontend: http://localhost:3000

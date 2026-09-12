@@ -3,7 +3,6 @@ from typing import Protocol, Self
 from src.modules.documents.application.ports.document_repository import (
     DocumentRepository,
 )
-from src.shared.outbox.application.repositories import OutboxRepository
 
 
 class UnitOfWork(Protocol):
@@ -14,7 +13,6 @@ class UnitOfWork(Protocol):
     """
 
     documents: DocumentRepository
-    outbox: OutboxRepository
 
     async def __aenter__(self) -> Self: ...
 

@@ -1,12 +1,8 @@
 name: hackathon
 
-# Обычный запуск (быстрый, без Kafka):
+# Основной запуск:
 #   docker compose up -d --build
-# С событийной инфраструктурой (Kafka + воркеры):
-#   docker compose --profile events up -d --build
-#
-# Kafka вынесена в профиль намеренно: её healthcheck ждёт до 100 секунд,
-# и на хакатоне это лишняя минута на каждом рестарте стека.
+# Kafka и воркеры удалены: событийная шина не нужна сервису документов.
 
 services:
   app:
@@ -27,8 +23,6 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    # --timeout-keep-alive 120: 7B-модель на CPU отвечает до минуты,
-   # дефолтные 5 секунд рвут соединение раньше, чем придёт ответ.
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir src --timeout-keep-alive 120
     healthcheck:
       test:
@@ -55,6 +49,8 @@ services:
     depends_on:
       app:
         condition: service_healthy
+      stt_service:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
@@ -62,6 +58,21 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+
+  stt_service:
+    build:
+      context: ./stt-service
+      dockerfile: Dockerfile
+    container_name: hackathon_stt
+    ports:
+      - "8200:8200"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8200/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
   db:
     image: postgres:17-alpine
@@ -124,6 +135,7 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+
   ml_service:
     build:
       context: .
@@ -135,74 +147,6 @@ services:
       FALLBACK_ENABLED: "true"
     depends_on:
       - ollama
-
-  kafka:
-    image: apache/kafka:4.3.0
-    container_name: hackathon_kafka
-    profiles: ["events"]
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_LISTENERS: CONTROLLER://localhost:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
-
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
-      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
-
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_NUM_PARTITIONS: 3
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-cluster.sh cluster-id --bootstrap-server localhost:9092 >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  outbox_publisher:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: hackathon_outbox_publisher
-    profiles: ["events"]
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: python -m src.workers.outbox_publisher
-    restart: unless-stopped
-
-  event_consumer:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: hackathon_event_consumer
-    profiles: ["events"]
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: python -m src.workers.event_consumer
-    restart: unless-stopped
 
 volumes:
   postgres_data:

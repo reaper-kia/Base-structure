@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { DEMO_DRAFTS } from '../../shared/api/demoDrafts';
+import { SpeechInput } from '../../features/speech/SpeechInput';
 
 const MAX_LENGTH = 20000;
 
@@ -25,6 +26,14 @@ export function DraftInput() {
       setDraft(text);
     },
     [setDraft]
+  );
+
+  const handleTranscript = useCallback(
+    (text: string) => {
+      const currentDraft = useDocumentStore.getState().draft.trimEnd();
+      setDraft(currentDraft ? `${currentDraft}\n${text}` : text);
+    },
+    [setDraft],
   );
 
   return (
@@ -106,6 +115,8 @@ export function DraftInput() {
         >
           Вставить из буфера
         </button>
+
+        <SpeechInput onTranscript={handleTranscript} />
 
         {DEMO_DRAFTS.map((demo) => (
           <button

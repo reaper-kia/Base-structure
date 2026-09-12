@@ -21,16 +21,15 @@ class Settings(BaseSettings):
 
     # Кэш результатов ИИ-обработки по хэшу черновика.
     cache_ttl_seconds: int = 600
+    # Короткий ТТЛ для кэша резервных (неуспешных) результатов.
+    fallback_cache_ttl_seconds: int = 30
 
-    kafka_bootstrap_servers: str = "kafka:9093"
-    kafka_client_id: str = "app"
-    kafka_events_consumer_group: str = "app.events"
-    kafka_events_topic: str = "app.events.v1"
-    kafka_events_dlq_topic: str = "app.events.dlq.v1"
-    kafka_consumer_max_attempts: int = 3
-    kafka_consumer_retry_delay_seconds: float = 1.0
-    outbox_publisher_batch_size: int = 100
-    outbox_publisher_poll_interval_seconds: float = 1.0
+    # Версия промпта/схемы. Используется в ключе кэша для инвалидации
+    # при обновлении модели или промпта.
+    prompt_version: str = "1.0.0"
+
+    # Максимальное время обработки документа (дедлайн).
+    processing_deadline_seconds: int = 180
 
     # Пустая строка = ИИ отключён. Бэкенд обязан пережить это (сценарий 6).
     ml_service_url: str = "http://ml_service:8100"
