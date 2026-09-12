@@ -6,12 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY ml_service/requirements.txt ./requirements.txt
+COPY requirements.txt .
+
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-COPY ml_service/src ./src
-COPY contracts ./contracts
+COPY src ./src
+COPY artifacts ./artifacts
 
 EXPOSE 8100
 
