@@ -2,10 +2,10 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { TracePage } from './TracePage';
-import { mockApi } from '../../shared/api/mock';
+import { api } from '../../shared/api';
 
 async function createReadyDocument(): Promise<string> {
-  const doc = await mockApi.createDocument({
+  const doc = await api.createDocument({
     draft: 'Директору ООО Ромашка Петрову П.П. от Иванова И.И. Прошу отпуск.',
     doc_type: 'memo',
     template_id: 'classic',
@@ -13,7 +13,7 @@ async function createReadyDocument(): Promise<string> {
 
   // Прогоняем до терминального состояния
   for (let i = 0; i < 5; i += 1) {
-    const current = await mockApi.getDocument(doc.id);
+    const current = await api.getDocument(doc.id);
     if (current.status !== 'processing') {
       return doc.id;
     }

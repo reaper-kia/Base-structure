@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { mockApi } from '../../shared/api/mock';
+import { api } from '../../shared/api';
 import type { TraceEntry } from '../../shared/api/types';
 
 export function TracePage() {
@@ -15,10 +15,10 @@ export function TracePage() {
     let cancelled = false;
     (async () => {
       try {
-        const result = await mockApi.getTrace(id);
+        const result = await api.getTrace(id);
         if (!cancelled) {
           setEntries(result);
-          setExpanded(new Set(result.map((entry) => entry.stage)));
+          setExpanded(new Set(result.map((entry: TraceEntry) => entry.stage)));
         }
       } catch (err) {
         if (!cancelled) {
@@ -94,7 +94,7 @@ export function TracePage() {
 
       {entries && (
         <ol className="space-y-2">
-          {entries.map((entry) => {
+          {entries.map((entry: TraceEntry) => {
             const isOpen = expanded.has(entry.stage);
             return (
               <li

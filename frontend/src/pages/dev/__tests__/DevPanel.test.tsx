@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { DevPanel } from '../DevPanel';
-import { mockApi } from '../../../shared/api/mock';
+import { api } from '../../../shared/api';
 
 describe('DevPanel', () => {
   beforeEach(async () => {
-    await mockApi.setAiForceFailure(false);
+    await api.setAiForceFailure(false);
   });
 
   afterEach(async () => {
-    await mockApi.setAiForceFailure(false);
+    await api.setAiForceFailure(false);
   });
 
   it('восстанавливает положение тумблера из dev/state', async () => {
-    await mockApi.setAiForceFailure(true);
+    await api.setAiForceFailure(true);
 
     render(<DevPanel />);
 
@@ -32,7 +32,7 @@ describe('DevPanel', () => {
     fireEvent.click(screen.getByTestId('break-ai-toggle'));
 
     await waitFor(async () => {
-      const state = await mockApi.getDevState();
+      const state = await api.getDevState();
       expect(state.ai_force_failure).toBe(true);
     });
   });

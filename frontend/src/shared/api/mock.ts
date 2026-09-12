@@ -1,4 +1,5 @@
 import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
+import type { DocumentApi } from './contract';
 import type {
   DocumentState,
   DocType,
@@ -47,16 +48,16 @@ const mockDocTypes: DocType[] = [
       { key: 'doc_date', label: 'Дата документа', required: true },
     ],
   },
-  {
+   {
     id: 'reference',
     name: 'Информационная справка',
     description: 'Справка о статусе или фактах',
     requisites: [
-      { key: 'addressee', label: 'Адресат', required: true },
       { key: 'author', label: 'Автор', required: true },
-      { key: 'position', label: 'Должность автора', required: true },
-      { key: 'subject', label: 'Заголовок', required: true },
+      { key: 'subject', label: 'Заголовок к тексту', required: true },
       { key: 'doc_date', label: 'Дата документа', required: true },
+      { key: 'signature', label: 'Подпись', required: true },
+      { key: 'addressee', label: 'Адресат', required: false },
     ],
   },
   {
@@ -175,9 +176,10 @@ export function extractRequisites(
     .filter((line) => line.length > 0);
 
   const addresseeLine =
-    lines.find((line) => /^(директору|руководителю|начальнику|адресат)/i.test(line)) ?? null;
+    lines.find((line) =>
+      /^(директору|руководителю|начальнику|адресат)/i.test(line)
+    ) ?? null;
 
-  // Подпись в конце: пропускаем дату, берём имя, затем должность перед ним
   let authorFromSignature: string | null = null;
   let positionFromSignature: string | null = null;
   for (let i = lines.length - 1; i >= 0 && i >= lines.length - 4; i -= 1) {
@@ -193,7 +195,6 @@ export function extractRequisites(
     if (authorFromSignature) break;
   }
 
-  // Строка «от …» как запасной источник
   let authorFromFrom: string | null = null;
   let positionFromFrom: string | null = null;
   const fromLine = lines.find((line) => /^от\s/i.test(line));
@@ -212,42 +213,36 @@ export function extractRequisites(
 
   const author = authorFromSignature ?? authorFromFrom;
   const position = positionFromSignature ?? positionFromFrom;
-
   const subjectLine =
     lines.find((line) => /^(о|об)\s+[а-яёa-z]/i.test(line)) ?? null;
   const dateLine = lines.find((line) => DATE_RE.test(line)) ?? null;
 
-  const schema: {
-    key: string;
-    label: string;
-    value: string | null;
-    auto?: boolean;
-  }[] = [
-    { key: 'addressee', label: 'Адресат', value: addresseeLine },
-    { key: 'author', label: 'Автор', value: author },
-    { key: 'position', label: 'Должность автора', value: position },
-    { key: 'subject', label: 'Заголовок к тексту', value: subjectLine },
-    {
-      key: 'doc_date',
-      label: 'Дата документа',
-      value: dateLine ?? todayDate(),
-      auto: !dateLine,
-    },
-  ];
+  const extracted: Record<string, { value: string | null; auto?: boolean }> = {
+    addressee: { value: addresseeLine },
+    author: { value: author },
+    position: { value: position },
+    subject: { value: subjectLine },
+    signature: { value: authorFromSignature },
+    doc_date: { value: dateLine ?? todayDate(), auto: !dateLine },
+  };
 
-  void docType;
+  const schema =
+    mockDocTypes.find((type) => type.id === docType)?.requisites ?? [];
 
-  return schema.map((field) => ({
-    key: field.key,
-    label: field.label,
-    value: field.value,
-    status: (field.auto
-      ? 'auto_filled'
-      : field.value
-        ? 'found_in_draft'
-        : 'missing') as RequisiteStatus,
-    required: true,
-  }));
+  return schema.map((field) => {
+    const entry = extracted[field.key] ?? { value: null };
+    return {
+      key: field.key,
+      label: field.label,
+      value: entry.value,
+      status: (entry.auto
+        ? 'auto_filled'
+        : entry.value
+          ? 'found_in_draft'
+          : 'missing') as RequisiteStatus,
+      required: field.required,
+    };
+  });
 }
 
 // ====== Правила улучшения текста ======
@@ -525,7 +520,7 @@ function getTerminalDocumentState(
 
 // ====== API моки ======
 
-export const mockApi = {
+export const mockApi: DocumentApi = {
   async getDocTypes(): Promise<DocType[]> {
     await delay(MOCK_DELAY);
     return mockDocTypes;

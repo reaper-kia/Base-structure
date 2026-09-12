@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { mockApi } from '../api/mock';
+import { api } from '../api';
 import { parseContentDisposition } from '../api/contentDisposition';
 import type { DocumentState, DocType, Template, MockScenario, DevState } from '../api/types';
 
@@ -71,7 +71,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
   loadDocTypes: async () => {
     try {
-      const docTypes = await mockApi.getDocTypes();
+      const docTypes = await api.getDocTypes();
       set({ docTypes, transportError: null });
     } catch {
       set({ transportError: 'Не удалось загрузить типы документов' });
@@ -80,7 +80,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
   loadTemplates: async () => {
     try {
-      const templates = await mockApi.getTemplates();
+      const templates = await api.getTemplates();
       set({ templates, transportError: null });
     } catch {
       set({ transportError: 'Не удалось загрузить шаблоны' });
@@ -100,7 +100,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
       renderFallback: null,
     });
     try {
-      const document = await mockApi.createDocument({
+      const document = await api.createDocument({
         draft,
         doc_type: docType,
         template_id: templateId,
@@ -116,7 +116,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
   fetchDocument: async (id) => {
     try {
-      const document = await mockApi.getDocument(id);
+      const document = await api.getDocument(id);
       set({ document, transportError: null });
     } catch {
       set({ transportError: 'Не удалось получить документ' });
@@ -129,7 +129,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
     set({ isPatchingRequisites: true, transportError: null });
     try {
-      const updated = await mockApi.patchRequisites(document.id, values);
+      const updated = await api.patchRequisites(document.id, values);
       set({ document: updated, isPatchingRequisites: false });
     } catch {
       set({
@@ -141,7 +141,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
   reprocessDocument: async (id) => {
     try {
-      const document = await mockApi.reprocessDocument(id);
+      const document = await api.reprocessDocument(id);
       set({ document, transportError: null, pollingTimedOut: false });
     } catch {
       set({ transportError: 'Не удалось запустить повторную обработку' });
@@ -151,7 +151,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
   renderDocument: async (id) => {
     set({ isRendering: true, transportError: null });
     try {
-      const result = await mockApi.renderDocument(id);
+      const result = await api.renderDocument(id);
       const filename =
         result.filename ?? parseContentDisposition(null, 'document.docx');
 
@@ -175,7 +175,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
     loadDevState: async () => {
     try {
-      const devState = await mockApi.getDevState();
+      const devState = await api.getDevState();
       set({ devState, transportError: null });
     } catch {
       set({ transportError: 'Не удалось загрузить состояние dev-панели' });
@@ -184,7 +184,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
   setAiForceFailure: async (enabled) => {
     try {
-      const devState = await mockApi.setAiForceFailure(enabled);
+      const devState = await api.setAiForceFailure(enabled);
       set({ devState });
     } catch {
       set({ transportError: 'Не удалось переключить режим отказа ИИ' });

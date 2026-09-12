@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { mockApi } from '../../shared/api/mock';
+import { api } from '../../shared/api';
 import { useDocumentStore } from '../../shared/store/documentStore';
 
 export function DevPanel() {
@@ -10,7 +10,7 @@ export function DevPanel() {
 
   useEffect(() => {
     loadDevState();
-    mockApi.getTemplateBroken().then(setTemplateBroken);
+    api.getTemplateBroken().then(setTemplateBroken);
   }, [loadDevState]);
 
   return (
@@ -54,12 +54,12 @@ export function DevPanel() {
             checked={templateBroken}
             onChange={(event) => {
               setTemplateBroken(event.target.checked);
-              mockApi.setTemplateBroken(event.target.checked);
+              api.setTemplateBroken(event.target.checked);
             }}
             className="w-4 h-4"
           />
           <span className="text-sm" style={{ color: 'var(--foreground)' }}>
-            Демо: повредить шаблон «modern» (плашка запасного шаблона при скачивании)
+            Демо: повредить шаблон «modern»
           </span>
         </label>
 
