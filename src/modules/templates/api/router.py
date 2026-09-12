@@ -40,14 +40,13 @@ async def list_templates() -> TemplateListResponse:
 
     return TemplateListResponse(templates=items)
 
+
 @router.post(
     "/api/templates/upload",
     status_code=201,
     summary="Загрузка и автопарсинг DOCX-шаблона",
 )
-async def upload_template(
-    file: Annotated[UploadFile, File(...)]
-):
+async def upload_template(file: Annotated[UploadFile, File(...)]):
     data = await file.read()
 
     if len(data) > MAX_UPLOAD_BYTES:
@@ -56,7 +55,9 @@ async def upload_template(
     try:
         rules, warnings = parse_docx_template(data)
     except NotADocxError:
-        raise HTTPException(status_code=422, detail="Файл не является корректным DOCX") from None
+        raise HTTPException(
+            status_code=422, detail="Файл не является корректным DOCX"
+        ) from None
 
     base = (
         re.sub(r"[^a-z0-9]+", "-", (file.filename or "template").lower()).strip("-")

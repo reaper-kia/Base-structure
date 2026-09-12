@@ -36,11 +36,7 @@ class InMemoryDocumentRepository:
         document_id: UUID,
     ) -> Document | None:
         document = self.items.get(document_id)
-        return (
-            deepcopy(document)
-            if document is not None
-            else None
-        )
+        return deepcopy(document) if document is not None else None
 
     async def update(self, document: Document) -> None:
         self.items[document.id] = deepcopy(document)
@@ -56,9 +52,7 @@ def client(
     monkeypatch: pytest.MonkeyPatch,
     repository: InMemoryDocumentRepository,
 ):
-    factory = FakeUoWFactory(
-        FakeUoW(documents=repository)
-    )
+    factory = FakeUoWFactory(FakeUoW(documents=repository))
 
     async def process_immediately(
         document_id: UUID,
@@ -70,11 +64,7 @@ def client(
         # cookie-сессии и передаёт его фоновой задаче.
         # Fake заменяет только HTTP-транспорт.
         if ai_force_failure:
-            llm = FakeLLMClient(
-                exception=LLMUnavailable(
-                    "ИИ отключён вручную"
-                )
-            )
+            llm = FakeLLMClient(exception=LLMUnavailable("ИИ отключён вручную"))
         else:
             llm = FakeLLMClient()
 
@@ -91,9 +81,7 @@ def client(
         process_immediately,
     )
 
-    app.dependency_overrides[
-        get_unit_of_work_factory
-    ] = lambda: factory
+    app.dependency_overrides[get_unit_of_work_factory] = lambda: factory
 
     with TestClient(app) as test_client:
         yield test_client
@@ -130,15 +118,11 @@ def test_toggle_on_makes_processing_fail(
         json={"enabled": True},
     )
     assert toggle.status_code == 200
-    assert toggle.json() == {
-        "ai_force_failure": True
-    }
+    assert toggle.json() == {"ai_force_failure": True}
 
     created = create_document(client)
 
-    document = client.get(
-        f"/api/documents/{created['id']}"
-    ).json()
+    document = client.get(f"/api/documents/{created['id']}").json()
     assert document["status"] == "failed"
     assert document["error"]["code"] == "llm_unavailable"
     assert document["error"]["recoverable"] is True
@@ -156,9 +140,7 @@ def test_draft_survives_failure(
     draft = "Черновик, который нельзя терять"
     created = create_document(client, draft=draft)
 
-    document = client.get(
-        f"/api/documents/{created['id']}"
-    ).json()
+    document = client.get(f"/api/documents/{created['id']}").json()
     assert document["status"] == "failed"
     assert document["draft"] == draft
 
@@ -173,9 +155,7 @@ def test_reprocess_after_toggle_off_succeeds(
     )
     created = create_document(client)
 
-    failed = client.get(
-        f"/api/documents/{created['id']}"
-    ).json()
+    failed = client.get(f"/api/documents/{created['id']}").json()
     assert failed["status"] == "failed"
 
     client.post(
@@ -183,14 +163,10 @@ def test_reprocess_after_toggle_off_succeeds(
         json={"enabled": False},
     )
 
-    response = client.post(
-        f"/api/documents/{created['id']}/reprocess"
-    )
+    response = client.post(f"/api/documents/{created['id']}/reprocess")
     assert response.status_code == 202
 
-    document = client.get(
-        f"/api/documents/{created['id']}"
-    ).json()
+    document = client.get(f"/api/documents/{created['id']}").json()
     assert document["status"] == "processed"
     assert document["error"] is None
 
@@ -212,14 +188,10 @@ def test_reprocess_preserves_user_decided_requisites(
     )
     assert patched.status_code == 200
 
-    response = client.post(
-        f"/api/documents/{created['id']}/reprocess"
-    )
+    response = client.post(f"/api/documents/{created['id']}/reprocess")
     assert response.status_code == 202
 
-    document = client.get(
-        f"/api/documents/{created['id']}"
-    ).json()
+    document = client.get(f"/api/documents/{created['id']}").json()
     assert document["status"] == "processed"
 
     addressee = next(
@@ -234,10 +206,7 @@ def test_reprocess_preserves_user_decided_requisites(
     )
 
     assert addressee["status"] == "user_provided"
-    assert (
-        addressee["value"]
-        == "Директору ООО «Ромашка»"
-    )
+    assert addressee["value"] == "Директору ООО «Ромашка»"
     assert position["status"] == "left_blank"
     assert position["value"] is None
 
@@ -253,9 +222,7 @@ def test_reprocess_while_processing_returns_409(
     )
     repository.items[document.id] = document
 
-    response = client.post(
-        f"/api/documents/{document.id}/reprocess"
-    )
+    response = client.post(f"/api/documents/{document.id}/reprocess")
 
     assert response.status_code == 409
 
@@ -264,14 +231,10 @@ def test_reprocess_while_processing_returns_409(
 def test_reprocess_unknown_document_returns_404(
     client: TestClient,
 ) -> None:
-    response = client.post(
-        f"/api/documents/{uuid4()}/reprocess"
-    )
+    response = client.post(f"/api/documents/{uuid4()}/reprocess")
 
     assert response.status_code == 404
-    assert response.json() == {
-        "detail": "Документ не найден"
-    }
+    assert response.json() == {"detail": "Документ не найден"}
 
 
 @pytest.mark.api

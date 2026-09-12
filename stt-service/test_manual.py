@@ -20,9 +20,7 @@ EXPECTED_MODEL = "vosk-model-small-ru-0.22"
 
 
 def create_synthetic_wav() -> bytes:
-    frame_count = int(
-        SAMPLE_RATE * SYNTHETIC_DURATION_SECONDS
-    )
+    frame_count = int(SAMPLE_RATE * SYNTHETIC_DURATION_SECONDS)
     silent_pcm = b"\x00\x00" * frame_count
 
     output = io.BytesIO()
@@ -42,15 +40,13 @@ def create_multipart_body(
 
     header = (
         f"--{boundary}\r\n"
-        'Content-Disposition: form-data; '
+        "Content-Disposition: form-data; "
         'name="audio"; filename="synthetic.wav"\r\n'
         "Content-Type: audio/wav\r\n"
         "\r\n"
     ).encode("utf-8")
 
-    footer = (
-        f"\r\n--{boundary}--\r\n"
-    ).encode("utf-8")
+    footer = (f"\r\n--{boundary}--\r\n").encode("utf-8")
 
     return header + wav_data + footer, boundary
 
@@ -75,14 +71,10 @@ def request_json(
     try:
         payload = json.loads(raw_body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise RuntimeError(
-            f"Сервис вернул невалидный JSON: {raw_body!r}"
-        ) from exc
+        raise RuntimeError(f"Сервис вернул невалидный JSON: {raw_body!r}") from exc
 
     if not isinstance(payload, dict):
-        raise RuntimeError(
-            f"Ожидался JSON-объект, получено: {payload!r}"
-        )
+        raise RuntimeError(f"Ожидался JSON-объект, получено: {payload!r}")
 
     return status_code, payload
 
@@ -112,17 +104,13 @@ def wait_until_reachable(
             continue
 
         if status_code != 200:
-            raise RuntimeError(
-                f"/health вернул HTTP {status_code}: {payload}"
-            )
+            raise RuntimeError(f"/health вернул HTTP {status_code}: {payload}")
 
         if payload != {
             "status": "ok",
             "model_loaded": True,
         }:
-            raise RuntimeError(
-                f"Неожиданный ответ /health: {payload}"
-            )
+            raise RuntimeError(f"Неожиданный ответ /health: {payload}")
 
         return payload
 
@@ -141,9 +129,7 @@ def test_stt(base_url: str) -> dict[str, Any]:
         f"{base_url}/stt",
         data=request_body,
         headers={
-            "Content-Type": (
-                f"multipart/form-data; boundary={boundary}"
-            ),
+            "Content-Type": (f"multipart/form-data; boundary={boundary}"),
             "Content-Length": str(len(request_body)),
         },
         method="POST",
@@ -155,9 +141,7 @@ def test_stt(base_url: str) -> dict[str, Any]:
     )
 
     if status_code != 200:
-        raise RuntimeError(
-            f"/stt вернул HTTP {status_code}: {payload}"
-        )
+        raise RuntimeError(f"/stt вернул HTTP {status_code}: {payload}")
 
     required_fields = {
         "text",
@@ -167,36 +151,26 @@ def test_stt(base_url: str) -> dict[str, Any]:
     missing_fields = required_fields.difference(payload)
     if missing_fields:
         raise RuntimeError(
-            "В ответе /stt отсутствуют поля: "
-            + ", ".join(sorted(missing_fields))
+            "В ответе /stt отсутствуют поля: " + ", ".join(sorted(missing_fields))
         )
 
     if not isinstance(payload["text"], str):
-        raise RuntimeError(
-            "Поле text должно быть строкой"
-        )
+        raise RuntimeError("Поле text должно быть строкой")
 
     if not isinstance(
         payload["duration_seconds"],
         (int, float),
     ):
-        raise RuntimeError(
-            "Поле duration_seconds должно быть числом"
-        )
+        raise RuntimeError("Поле duration_seconds должно быть числом")
 
-    if abs(
-        float(payload["duration_seconds"])
-        - SYNTHETIC_DURATION_SECONDS
-    ) > 0.01:
+    if abs(float(payload["duration_seconds"]) - SYNTHETIC_DURATION_SECONDS) > 0.01:
         raise RuntimeError(
-            "Сервис вернул неожиданную длительность: "
-            f"{payload['duration_seconds']}"
+            f"Сервис вернул неожиданную длительность: {payload['duration_seconds']}"
         )
 
     if payload["model"] != EXPECTED_MODEL:
         raise RuntimeError(
-            "Сервис вернул неожиданное имя модели: "
-            f"{payload['model']!r}"
+            f"Сервис вернул неожиданное имя модели: {payload['model']!r}"
         )
 
     return payload
@@ -204,17 +178,12 @@ def test_stt(base_url: str) -> dict[str, Any]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Техническая проверка локального STT-сервиса"
-        )
+        description=("Техническая проверка локального STT-сервиса")
     )
     parser.add_argument(
         "--url",
         default="http://localhost:8200",
-        help=(
-            "Базовый URL сервиса "
-            "(по умолчанию: http://localhost:8200)"
-        ),
+        help=("Базовый URL сервиса (по умолчанию: http://localhost:8200)"),
     )
     return parser.parse_args()
 

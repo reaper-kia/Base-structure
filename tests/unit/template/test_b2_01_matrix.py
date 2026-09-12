@@ -21,7 +21,9 @@ def _doc_type_ids() -> list[str]:
 
 
 def _spec(doc_type: str) -> dict:
-    return yaml.safe_load((DOC_TYPES_DIR / f"{doc_type}.yaml").read_text(encoding="utf-8"))
+    return yaml.safe_load(
+        (DOC_TYPES_DIR / f"{doc_type}.yaml").read_text(encoding="utf-8")
+    )
 
 
 def _marker(key: str) -> str:
@@ -35,13 +37,17 @@ def _requisites(spec: dict, *, value_mode: str = "marker") -> list[Requisite]:
             value = _marker(r["key"])
         else:
             value = None
-        reqs.append(Requisite(
-            key=r["key"],
-            label=r.get("label", r["key"]),
-            value=value,
-            status=RequisiteStatus.USER_PROVIDED if value_mode == "marker" else RequisiteStatus.MISSING,
-            required=bool(r.get("required")),
-        ))
+        reqs.append(
+            Requisite(
+                key=r["key"],
+                label=r.get("label", r["key"]),
+                value=value,
+                status=RequisiteStatus.USER_PROVIDED
+                if value_mode == "marker"
+                else RequisiteStatus.MISSING,
+                required=bool(r.get("required")),
+            )
+        )
     return reqs
 
 
@@ -81,7 +87,9 @@ def test_matrix_all_required_markers_present(renderer, doc_type, template_id) ->
 @pytest.mark.parametrize("template_id", TEMPLATE_IDS)
 def test_missing_required_renders_label(renderer, template_id) -> None:
     spec = _spec("memo")
-    data = renderer.render("текст", _requisites(spec, value_mode="missing"), template_id)
+    data = renderer.render(
+        "текст", _requisites(spec, value_mode="missing"), template_id
+    )
     text = _full_text(data)
 
     for r in spec["requisites"]:
@@ -105,7 +113,9 @@ def test_coverage_gap_caught_at_load(tmp_path: Path) -> None:
     assets = tmp_path / "assets"
     tpl = assets / "classic"
     tpl.mkdir(parents=True)
-    rules = yaml.safe_load((ASSETS / "classic" / "rules.yaml").read_text(encoding="utf-8"))
+    rules = yaml.safe_load(
+        (ASSETS / "classic" / "rules.yaml").read_text(encoding="utf-8")
+    )
     rules["requisites_layout"] = [
         b for b in rules["requisites_layout"] if b.get("key") != "signature"
     ]
@@ -113,6 +123,7 @@ def test_coverage_gap_caught_at_load(tmp_path: Path) -> None:
         yaml.safe_dump(rules, allow_unicode=True), encoding="utf-8"
     )
     from docx import Document
+
     Document().save(str(tpl / "template.docx"))
 
     template = TemplateLoader(assets).list_templates()[0]

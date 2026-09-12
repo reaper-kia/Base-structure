@@ -34,9 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 FILE_TOO_LARGE_DETAIL = "файл слишком большой"
-SERVICE_UNAVAILABLE_DETAIL = (
-    "сервис распознавания временно недоступен"
-)
+SERVICE_UNAVAILABLE_DETAIL = "сервис распознавания временно недоступен"
 
 recognizer = VoskSpeechRecognizer(MODEL_PATH)
 
@@ -176,10 +174,7 @@ async def transcribe(
 
     # Starlette обычно сообщает точный размер файловой части после
     # multipart-парсинга. Проверка позволяет отказаться от чтения сразу.
-    if (
-        audio.size is not None
-        and audio.size > MAX_FILE_SIZE_BYTES
-    ):
+    if audio.size is not None and audio.size > MAX_FILE_SIZE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=FILE_TOO_LARGE_DETAIL,
@@ -219,9 +214,7 @@ async def transcribe(
                 logger.warning("Распознавание недоступно: %s", exc)
                 raise service_unavailable_error() from exc
             except Exception as exc:
-                logger.exception(
-                    "Непредвиденная ошибка распознавания"
-                )
+                logger.exception("Непредвиденная ошибка распознавания")
                 raise service_unavailable_error() from exc
 
             return SttResponse(

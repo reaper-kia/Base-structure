@@ -1,4 +1,5 @@
 """Генерирует 8 эталонных DOCX (4 типа × 2 шаблона) в artifacts/ — демо для защиты."""
+
 from __future__ import annotations
 
 import sys
@@ -47,7 +48,9 @@ def generate_samples(out_dir: Path) -> list[Path]:
             Requisite(
                 key=r["key"],
                 label=r.get("label", r["key"]),
-                value=DEMO_VALUES.get(r["key"], f"Значение «{r.get('label', r['key'])}»"),
+                value=DEMO_VALUES.get(
+                    r["key"], f"Значение «{r.get('label', r['key'])}»"
+                ),
                 status=RequisiteStatus.USER_PROVIDED,
                 required=bool(r.get("required")),
             )

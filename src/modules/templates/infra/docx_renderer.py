@@ -32,6 +32,7 @@ def _clear_tables(element) -> None:
 
 def _safe_format(template: str, **kwargs) -> str:
     """Безопасная подстановка: неизвестные ключи дают пустую строку, а не [ключ]."""
+
     class _DefaultDict(defaultdict):
         def __missing__(self, key):
             return ""
@@ -126,7 +127,9 @@ class TemplateDocxRenderer:
         section.left_margin = Mm(page["left_mm"])
         section.right_margin = Mm(page["right_mm"])
 
-    def _apply_headers_footers(self, doc: Document, rules: dict, requisites: list[Requisite]) -> None:
+    def _apply_headers_footers(
+        self, doc: Document, rules: dict, requisites: list[Requisite]
+    ) -> None:
         hf = rules.get("header_footer", {})
         section = doc.sections[0]
         context = {r.key: (r.value or "") for r in requisites}
@@ -210,7 +213,15 @@ class TemplateDocxRenderer:
             key = block["key"]
 
             if key == "body":
-                self._add_body_text(doc, improved_text, rules, font_family, font_size, spacing, alignment_map)
+                self._add_body_text(
+                    doc,
+                    improved_text,
+                    rules,
+                    font_family,
+                    font_size,
+                    spacing,
+                    alignment_map,
+                )
                 continue
 
             if block.get("type") == "table" or block.get("layout") == "table":
@@ -230,7 +241,9 @@ class TemplateDocxRenderer:
             )
 
             para = doc.add_paragraph()
-            para.alignment = alignment_map.get(block.get("position", "left"), WD_ALIGN_PARAGRAPH.LEFT)
+            para.alignment = alignment_map.get(
+                block.get("position", "left"), WD_ALIGN_PARAGRAPH.LEFT
+            )
 
             if is_missing:
                 run = para.add_run(f"[{req.label}]")
@@ -309,7 +322,9 @@ class TemplateDocxRenderer:
         alignment_map: dict,
     ) -> None:
         # Выравнивание берём из правил, а не хардкодом (classic: justify, modern: left)
-        align = alignment_map.get(rules.get("alignment", "justify"), WD_ALIGN_PARAGRAPH.JUSTIFY)
+        align = alignment_map.get(
+            rules.get("alignment", "justify"), WD_ALIGN_PARAGRAPH.JUSTIFY
+        )
 
         for para_text in text.split("\n\n"):
             if not para_text.strip():
@@ -321,7 +336,9 @@ class TemplateDocxRenderer:
             if "line" in spacing:
                 para.paragraph_format.line_spacing = spacing["line"]
             if "first_line_indent_cm" in spacing:
-                para.paragraph_format.first_line_indent = Cm(spacing["first_line_indent_cm"])
+                para.paragraph_format.first_line_indent = Cm(
+                    spacing["first_line_indent_cm"]
+                )
             if "space_after_pt" in spacing:
                 para.paragraph_format.space_after = Pt(spacing["space_after_pt"])
 

@@ -118,9 +118,7 @@ class VoskSpeechRecognizer:
         if model is None:
             raise ModelUnavailableError("модель Vosk не загружена")
 
-        wav_file, frame_count, duration_seconds = self._open_validated_wav(
-            audio_file
-        )
+        wav_file, frame_count, duration_seconds = self._open_validated_wav(audio_file)
 
         try:
             try:
@@ -135,18 +133,14 @@ class VoskSpeechRecognizer:
                 ) from exc
 
             expected_pcm_bytes = (
-                frame_count
-                * EXPECTED_CHANNELS
-                * EXPECTED_SAMPLE_WIDTH_BYTES
+                frame_count * EXPECTED_CHANNELS * EXPECTED_SAMPLE_WIDTH_BYTES
             )
             consumed_pcm_bytes = 0
             text_parts: list[str] = []
 
             while True:
                 try:
-                    pcm_chunk = wav_file.readframes(
-                        RECOGNITION_CHUNK_FRAMES
-                    )
+                    pcm_chunk = wav_file.readframes(RECOGNITION_CHUNK_FRAMES)
                 except _AUDIO_PARSE_ERRORS as exc:
                     raise InvalidAudioError(
                         "WAV-файл повреждён: не удалось прочитать аудиоданные"
@@ -159,36 +153,24 @@ class VoskSpeechRecognizer:
 
                 try:
                     if kaldi_recognizer.AcceptWaveform(pcm_chunk):
-                        text = self._extract_text(
-                            kaldi_recognizer.Result()
-                        )
+                        text = self._extract_text(kaldi_recognizer.Result())
                         if text:
                             text_parts.append(text)
                 except RecognitionError:
                     raise
                 except Exception as exc:
-                    logger.exception(
-                        "Ошибка Vosk во время обработки аудиоданных"
-                    )
-                    raise RecognitionError(
-                        "ошибка во время распознавания"
-                    ) from exc
+                    logger.exception("Ошибка Vosk во время обработки аудиоданных")
+                    raise RecognitionError("ошибка во время распознавания") from exc
 
             if consumed_pcm_bytes != expected_pcm_bytes:
-                raise InvalidAudioError(
-                    "WAV-файл повреждён: аудиоданные обрезаны"
-                )
+                raise InvalidAudioError("WAV-файл повреждён: аудиоданные обрезаны")
 
             try:
-                final_text = self._extract_text(
-                    kaldi_recognizer.FinalResult()
-                )
+                final_text = self._extract_text(kaldi_recognizer.FinalResult())
             except RecognitionError:
                 raise
             except Exception as exc:
-                logger.exception(
-                    "Vosk не смог сформировать итоговый результат"
-                )
+                logger.exception("Vosk не смог сформировать итоговый результат")
                 raise RecognitionError(
                     "не удалось получить результат распознавания"
                 ) from exc
@@ -213,9 +195,7 @@ class VoskSpeechRecognizer:
             audio_file.seek(0)
             wav_file = wave.open(audio_file, "rb")
         except _AUDIO_PARSE_ERRORS as exc:
-            raise InvalidAudioError(
-                "файл не является корректным WAV"
-            ) from exc
+            raise InvalidAudioError("файл не является корректным WAV") from exc
 
         try:
             channels = wav_file.getnchannels()
@@ -246,22 +226,14 @@ class VoskSpeechRecognizer:
                 )
 
             if sample_width != EXPECTED_SAMPLE_WIDTH_BYTES:
-                raise InvalidAudioError(
-                    "ожидается WAV с 16-битными PCM-сэмплами"
-                )
+                raise InvalidAudioError("ожидается WAV с 16-битными PCM-сэмплами")
 
             if frame_count <= 0:
-                raise InvalidAudioError(
-                    "WAV-файл не содержит аудиоданных"
-                )
+                raise InvalidAudioError("WAV-файл не содержит аудиоданных")
 
-            maximum_frames = int(
-                MAX_AUDIO_DURATION_SECONDS * EXPECTED_SAMPLE_RATE
-            )
+            maximum_frames = int(MAX_AUDIO_DURATION_SECONDS * EXPECTED_SAMPLE_RATE)
             if frame_count > maximum_frames:
-                raise InvalidAudioError(
-                    "запись длиннее 3 минут, разбейте на части"
-                )
+                raise InvalidAudioError("запись длиннее 3 минут, разбейте на части")
 
             duration_seconds = frame_count / EXPECTED_SAMPLE_RATE
         except InvalidAudioError:
@@ -275,19 +247,13 @@ class VoskSpeechRecognizer:
         try:
             payload = json.loads(result_json)
         except (json.JSONDecodeError, TypeError) as exc:
-            raise RecognitionError(
-                "Vosk вернул некорректный JSON"
-            ) from exc
+            raise RecognitionError("Vosk вернул некорректный JSON") from exc
 
         if not isinstance(payload, dict):
-            raise RecognitionError(
-                "Vosk вернул неожиданный формат результата"
-            )
+            raise RecognitionError("Vosk вернул неожиданный формат результата")
 
         text = payload.get("text")
         if not isinstance(text, str):
-            raise RecognitionError(
-                "в результате Vosk отсутствует текст"
-            )
+            raise RecognitionError("в результате Vosk отсутствует текст")
 
         return text.strip()

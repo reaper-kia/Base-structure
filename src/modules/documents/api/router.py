@@ -201,9 +201,7 @@ async def create_document(
         await uow.documents.add(document)
         await uow.commit()
 
-    session_id, _ = resolve_session_id(
-        request.cookies.get(COOKIE_NAME)
-    )
+    session_id, _ = resolve_session_id(request.cookies.get(COOKIE_NAME))
     ai_force_failure = get_ai_force_failure(session_id)
 
     schedule_processing(
@@ -271,13 +269,10 @@ async def update_requisites(
 
         schema_keys = {
             requisite.key
-            for requisite in get_doc_type(
-                document.doc_type.value
-            ).requisites
+            for requisite in get_doc_type(document.doc_type.value).requisites
         }
         requisites_by_key = {
-            requisite.key: requisite
-            for requisite in document.requisites
+            requisite.key: requisite for requisite in document.requisites
         }
 
         for key, raw_value in payload.values.items():
@@ -288,11 +283,7 @@ async def update_requisites(
             if requisite is None:
                 continue
 
-            value = (
-                raw_value.strip()
-                if isinstance(raw_value, str)
-                else raw_value
-            )
+            value = raw_value.strip() if isinstance(raw_value, str) else raw_value
             value = value or None
 
             if value is None:
@@ -336,8 +327,7 @@ async def reprocess_document(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
-                    "Документ уже обрабатывается. "
-                    "Дождитесь завершения или таймаута."
+                    "Документ уже обрабатывается. Дождитесь завершения или таймаута."
                 ),
             )
 
@@ -348,9 +338,7 @@ async def reprocess_document(
         await uow.documents.update(document)
         await uow.commit()
 
-    session_id, _ = resolve_session_id(
-        request.cookies.get(COOKIE_NAME)
-    )
+    session_id, _ = resolve_session_id(request.cookies.get(COOKIE_NAME))
     ai_force_failure = get_ai_force_failure(session_id)
 
     schedule_processing(
@@ -412,11 +400,7 @@ async def render_document(
         raise
 
     filename = _render_filename(spec.name)
-    headers = {
-        "Content-Disposition": (
-            f'attachment; filename="{filename}"'
-        )
-    }
+    headers = {"Content-Disposition": (f'attachment; filename="{filename}"')}
 
     if result.template_fallback_used:
         headers["X-Template-Fallback"] = "true"
@@ -430,12 +414,8 @@ async def render_document(
         {
             "template_id": document.template_id,
             "filename": filename,
-            "template_fallback_used": (
-                result.template_fallback_used
-            ),
-            "template_fallback_reason": (
-                result.template_fallback_reason
-            ),
+            "template_fallback_used": (result.template_fallback_used),
+            "template_fallback_reason": (result.template_fallback_reason),
         },
     )
 
@@ -461,9 +441,7 @@ async def toggle_ai_failure(
     response: Response,
 ) -> dict:
     """Переключает имитацию отказа ИИ для текущей сессии."""
-    session_id, is_new = resolve_session_id(
-        request.cookies.get(COOKIE_NAME)
-    )
+    session_id, is_new = resolve_session_id(request.cookies.get(COOKIE_NAME))
     set_ai_force_failure(session_id, payload.enabled)
 
     if is_new:
@@ -481,9 +459,7 @@ async def toggle_ai_failure(
 @router.get("/dev/state")
 async def get_dev_state(request: Request) -> dict:
     """Возвращает диагностическое состояние текущей сессии."""
-    session_id, _ = resolve_session_id(
-        request.cookies.get(COOKIE_NAME)
-    )
+    session_id, _ = resolve_session_id(request.cookies.get(COOKIE_NAME))
     ai_force_failure = get_ai_force_failure(session_id)
 
     ml_reachable = False
@@ -492,17 +468,13 @@ async def get_dev_state(request: Request) -> dict:
     if settings.ml_service_url:
         try:
             async with httpx.AsyncClient(timeout=2.0) as client:
-                response = await client.get(
-                    f"{settings.ml_service_url}/health/model"
-                )
+                response = await client.get(f"{settings.ml_service_url}/health/model")
                 response.raise_for_status()
                 payload = response.json()
         except Exception:  # noqa: BLE001
             pass
         else:
-            ml_reachable = bool(
-                payload.get("model_loaded", False)
-            )
+            ml_reachable = bool(payload.get("model_loaded", False))
             model_version = payload.get(
                 "model_version",
                 model_version,

@@ -21,5 +21,4 @@ class LLMClient(Protocol):
         doc_type_name: str,
         structure_hint: str,
         requisite_keys: list[str],
-    ) -> LLMResult:
-        ...
+    ) -> LLMResult: ...

@@ -115,9 +115,7 @@ async def run(
         doc.error = None
         now = datetime.now(UTC)
         doc.started_at = now
-        doc.deadline = now + timedelta(
-            seconds=settings.processing_deadline_seconds
-        )
+        doc.deadline = now + timedelta(seconds=settings.processing_deadline_seconds)
 
     document = await _change_document(document_id, uow_factory, start)
 
@@ -191,9 +189,7 @@ async def run(
                     },
                     duration_ms=round(llm_duration_ms, 2),
                 )
-                trace_store.finish_attempt(
-                    document_id, attempt_id, outcome="failed"
-                )
+                trace_store.finish_attempt(document_id, attempt_id, outcome="failed")
                 await _mark_failed(
                     document_id,
                     uow_factory,
@@ -234,9 +230,7 @@ async def run(
             "llm_result",
             asdict(result),
             duration_ms=(
-                round(llm_duration_ms, 2)
-                if llm_duration_ms is not None
-                else None
+                round(llm_duration_ms, 2) if llm_duration_ms is not None else None
             ),
         )
 
@@ -246,9 +240,7 @@ async def run(
             lambda doc: setattr(doc, "stage", ProcessingStage.FACT_GUARD),
         )
 
-        trace_store.record(
-            document_id, attempt_id, "fact_guard", result.fact_guard
-        )
+        trace_store.record(document_id, attempt_id, "fact_guard", result.fact_guard)
 
         await _change_document(
             document_id,
@@ -318,7 +310,6 @@ async def run(
             uow_factory,
             code="internal",
             message=(
-                "Внутренняя ошибка обработки. Черновик сохранён, "
-                "попробуйте ещё раз."
+                "Внутренняя ошибка обработки. Черновик сохранён, попробуйте ещё раз."
             ),
         )

@@ -11,8 +11,15 @@ payload = {
     "doc_type": "resignation",
     "doc_type_name": "Заявление на увольнение",
     "structure_hint": "Официально-деловой стиль, от первого лица",
-    "requisite_keys": ["improved_text", "addressee", "author", "position", "subject", "doc_date"],
-    "request_id": "test-hackathon-001"
+    "requisite_keys": [
+        "improved_text",
+        "addressee",
+        "author",
+        "position",
+        "subject",
+        "doc_date",
+    ],
+    "request_id": "test-hackathon-001",
 }
 
 print("Отправляем запрос в ML-сервис (ждем ответа нейросети)...")
@@ -21,9 +28,9 @@ start = time.time()
 try:
     response = requests.post(URL, json=payload)
     response.raise_for_status()  # Проверяем, что нет ошибки 500
-    
+
     data = response.json()
-    
+
     print(f"\n✅ Ответ получен за {round(time.time() - start, 1)} сек!\n")
     print("=== ИТОГОВЫЙ ТЕКСТ ===")
     print(data.get("improved_text"))

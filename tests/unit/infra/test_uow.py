@@ -20,9 +20,7 @@ def _fake_session() -> MagicMock:
 async def test_sqlalchemy_uow_initializes_all_repositories() -> None:
     """UoW инициализирует репозитории текущего сервиса документов."""
     session = _fake_session()
-    uow = SQLAlchemyUnitOfWork(
-        MagicMock(return_value=session)
-    )
+    uow = SQLAlchemyUnitOfWork(MagicMock(return_value=session))
 
     entered = await uow.__aenter__()
 
@@ -37,9 +35,7 @@ async def test_sqlalchemy_uow_initializes_all_repositories() -> None:
 @pytest.mark.asyncio
 async def test_sqlalchemy_uow_rolls_back_on_exception() -> None:
     session = _fake_session()
-    uow = SQLAlchemyUnitOfWork(
-        MagicMock(return_value=session)
-    )
+    uow = SQLAlchemyUnitOfWork(MagicMock(return_value=session))
     await uow.__aenter__()
 
     await uow.__aexit__(
@@ -57,9 +53,7 @@ async def test_sqlalchemy_uow_rolls_back_on_exception() -> None:
 async def test_sqlalchemy_uow_commits_and_flushes() -> None:
     session = _fake_session()
     session.flush = AsyncMock()
-    uow = SQLAlchemyUnitOfWork(
-        MagicMock(return_value=session)
-    )
+    uow = SQLAlchemyUnitOfWork(MagicMock(return_value=session))
     await uow.__aenter__()
 
     await uow.commit()

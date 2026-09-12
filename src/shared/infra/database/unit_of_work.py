@@ -6,7 +6,6 @@ from src.modules.documents.infra.repositories import SQLAlchemyDocumentRepositor
 from src.shared.application.unit_of_work import UnitOfWork
 
 
-
 class SQLAlchemyUnitOfWork(UnitOfWork):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
@@ -14,7 +13,6 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
     async def __aenter__(self) -> Self:
         self.session = self._session_factory()
         self.documents = SQLAlchemyDocumentRepository(self.session)
-        
 
         return self
 

@@ -14,8 +14,11 @@ from src.modules.templates.infra.docx_renderer import TemplateDocxRenderer
 ASSETS = Path("src/modules/templates/assets")
 TEMPLATE_IDS = ["classic", "modern"]
 JC_BY_ALIGNMENT = {
-    "justify": "both", "both": "both",
-    "left": "left", "center": "center", "right": "right",
+    "justify": "both",
+    "both": "both",
+    "left": "left",
+    "center": "center",
+    "right": "right",
 }
 
 VALUES = {
@@ -39,14 +42,17 @@ def renderer() -> TemplateDocxRenderer:
 
 def _reqs() -> list[Requisite]:
     return [
-        Requisite(key=k, label=k, value=v,
-                  status=RequisiteStatus.USER_PROVIDED, required=True)
+        Requisite(
+            key=k, label=k, value=v, status=RequisiteStatus.USER_PROVIDED, required=True
+        )
         for k, v in VALUES.items()
     ]
 
 
 def _rules(template_id: str) -> dict:
-    return yaml.safe_load((ASSETS / template_id / "rules.yaml").read_text(encoding="utf-8"))
+    return yaml.safe_load(
+        (ASSETS / template_id / "rules.yaml").read_text(encoding="utf-8")
+    )
 
 
 def _render(renderer, template_id: str, body: str = BODY_MARKER) -> Document:

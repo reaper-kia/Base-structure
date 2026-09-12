@@ -31,8 +31,9 @@ def renderer() -> TemplateDocxRenderer:
 
 def _reqs() -> list[Requisite]:
     return [
-        Requisite(key=k, label=k, value=v,
-                  status=RequisiteStatus.USER_PROVIDED, required=True)
+        Requisite(
+            key=k, label=k, value=v, status=RequisiteStatus.USER_PROVIDED, required=True
+        )
         for k, v in VALUES.items()
     ]
 
@@ -127,4 +128,3 @@ def test_render_from_revision_hits_cache(renderer) -> None:
     data2, _ = renderer.render_from_revision(BODY, reqs, "classic")
     assert data1 == data2
     assert len(renderer._revision_cache) == 1
-    

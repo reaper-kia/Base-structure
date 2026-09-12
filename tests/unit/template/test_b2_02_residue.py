@@ -31,8 +31,9 @@ def renderer() -> TemplateDocxRenderer:
 
 def _full_requisites() -> list[Requisite]:
     return [
-        Requisite(key=k, label=k, value=v,
-                  status=RequisiteStatus.USER_PROVIDED, required=True)
+        Requisite(
+            key=k, label=k, value=v, status=RequisiteStatus.USER_PROVIDED, required=True
+        )
         for k, v in VALUES.items()
     ]
 

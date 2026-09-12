@@ -19,7 +19,9 @@ from src.modules.templates.domain.value_objects import TemplateRules
 logger = logging.getLogger(__name__)
 
 DEFAULT_ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
-DOC_TYPES_DIR = Path(__file__).resolve().parents[2] / "documents" / "config" / "doc_types"
+DOC_TYPES_DIR = (
+    Path(__file__).resolve().parents[2] / "documents" / "config" / "doc_types"
+)
 DEFAULT_TEMPLATE_ID = "classic"
 REQUIRED_DOCX_PARTS = ("[Content_Types].xml", "word/document.xml")
 
@@ -95,7 +97,7 @@ def _docx_is_usable(path: Path) -> bool:
                 return False
         Document(path)  # финальная проба: python-docx реально открывает файл
         return True
-    except Exception as exc:    # noqa: BLE001 - проба пригодности: список исключений
+    except Exception as exc:  # noqa: BLE001 - проба пригодности: список исключений
         logger.debug("DOCX %s не прошёл пробу пригодности: %s", path, exc)
         return False
 
@@ -157,8 +159,7 @@ class TemplateLoader:
             fallback,
             fallback_used=True,
             fallback_reason=(
-                f"Шаблон «{template_id}» повреждён, "
-                f"применён «{DEFAULT_TEMPLATE_ID}»"
+                f"Шаблон «{template_id}» повреждён, применён «{DEFAULT_TEMPLATE_ID}»"
             ),
         )
 
@@ -187,7 +188,9 @@ class TemplateLoader:
 
             # Предупреждение о необязательных ключах без места в раскладке:
             # они не роняют загрузку, но молча не доедут до документа (B2-04).
-            lost_optional = (all_spec_keys() - required_requisite_keys()) - layout_keys(raw_rules)
+            lost_optional = (all_spec_keys() - required_requisite_keys()) - layout_keys(
+                raw_rules
+            )
             if lost_optional:
                 logger.warning(
                     "Шаблон «%s»: необязательные ключи без места в раскладке %s — "
@@ -202,7 +205,9 @@ class TemplateLoader:
             docx_exists = docx_path.exists()
 
             if base_docx_mode == "none":
-                docx_to_use = docx_path if (docx_exists and _docx_is_usable(docx_path)) else None
+                docx_to_use = (
+                    docx_path if (docx_exists and _docx_is_usable(docx_path)) else None
+                )
             elif not docx_exists:
                 return self._unavailable(
                     template_id,
@@ -227,7 +232,9 @@ class TemplateLoader:
         except yaml.YAMLError:
             return self._unavailable(template_id, "битый YAML")
         except TemplateRulesInvalidError:
-            return self._unavailable(template_id, "невалидные правила или дыра в покрытии")
+            return self._unavailable(
+                template_id, "невалидные правила или дыра в покрытии"
+            )
         except OSError as exc:
             return self._unavailable(template_id, f"ошибка чтения: {exc}")
 

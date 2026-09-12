@@ -35,11 +35,7 @@ class InMemoryDocumentRepository:
         document_id: UUID,
     ) -> Document | None:
         document = self.items.get(document_id)
-        return (
-            deepcopy(document)
-            if document is not None
-            else None
-        )
+        return deepcopy(document) if document is not None else None
 
     async def update(self, document: Document) -> None:
         self.items[document.id] = deepcopy(document)
@@ -78,9 +74,7 @@ class InMemoryJsonCache:
 
 class _BrokenRedis:
     async def get(self, key: str):
-        raise RedisConnectionError(
-            "соединение с Redis недоступно"
-        )
+        raise RedisConnectionError("соединение с Redis недоступно")
 
     async def set(
         self,
@@ -88,9 +82,7 @@ class _BrokenRedis:
         value: str,
         ex: int | None = None,
     ):
-        raise RedisConnectionError(
-            "соединение с Redis недоступно"
-        )
+        raise RedisConnectionError("соединение с Redis недоступно")
 
 
 def _factory(
@@ -100,9 +92,7 @@ def _factory(
     InMemoryDocumentRepository,
 ]:
     repository = InMemoryDocumentRepository(document)
-    factory = FakeUoWFactory(
-        FakeUoW(documents=repository)
-    )
+    factory = FakeUoWFactory(FakeUoW(documents=repository))
     return factory, repository
 
 
@@ -143,11 +133,7 @@ async def test_llm_unavailable_marks_failed_and_keeps_draft() -> None:
     draft = "Черновик, который нельзя терять"
     document = Document(draft=draft)
     factory, repository = _factory(document)
-    llm = FakeLLMClient(
-        exception=LLMUnavailable(
-            "нет соединения с ml_service"
-        )
-    )
+    llm = FakeLLMClient(exception=LLMUnavailable("нет соединения с ml_service"))
 
     await run(
         document.id,
@@ -198,9 +184,7 @@ async def test_fallback_result_marks_degraded_not_processed() -> None:
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_repeated_request_hits_cache_and_skips_llm() -> None:
-    document = Document(
-        draft="Один и тот же текст"
-    )
+    document = Document(draft="Один и тот же текст")
     factory, repository = _factory(document)
     llm = FakeLLMClient(
         result=LLMResult(
@@ -276,10 +260,7 @@ async def test_trace_has_all_stages_after_success() -> None:
     attempts = trace_store.get(document.id)
     assert len(attempts) == 1
 
-    stages = [
-        entry["stage"]
-        for entry in attempts[0]["stages"]
-    ]
+    stages = [entry["stage"] for entry in attempts[0]["stages"]]
 
     assert stages == [
         "llm_request",
@@ -296,11 +277,7 @@ async def test_unexpected_exception_marks_failed_not_crashes() -> None:
     draft = "Черновик, который нельзя терять"
     document = Document(draft=draft)
     factory, repository = _factory(document)
-    llm = FakeLLMClient(
-        exception=RuntimeError(
-            "неожиданная ошибка в клиенте"
-        )
-    )
+    llm = FakeLLMClient(exception=RuntimeError("неожиданная ошибка в клиенте"))
 
     await run(
         document.id,
@@ -321,8 +298,5 @@ async def test_unexpected_exception_marks_failed_not_crashes() -> None:
     attempts = trace_store.get(document.id)
     assert len(attempts) == 1
 
-    stages = [
-        entry["stage"]
-        for entry in attempts[0]["stages"]
-    ]
+    stages = [entry["stage"] for entry in attempts[0]["stages"]]
     assert stages[-1] == "pipeline_error"

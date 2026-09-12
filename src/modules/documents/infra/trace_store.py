@@ -53,9 +53,7 @@ def record(
             return
 
 
-def update_attempt_meta(
-    document_id: UUID, attempt_id: UUID, **meta: Any
-) -> None:
+def update_attempt_meta(document_id: UUID, attempt_id: UUID, **meta: Any) -> None:
     """Обновляет метаданные попытки (например, версию модели после ответа)."""
     for attempt in _ATTEMPTS.get(document_id, []):
         if attempt["attempt_id"] == str(attempt_id):
@@ -77,9 +75,7 @@ def record_render(document_id: UUID, payload: Any) -> None:
     )
 
 
-def finish_attempt(
-    document_id: UUID, attempt_id: UUID, *, outcome: str
-) -> None:
+def finish_attempt(document_id: UUID, attempt_id: UUID, *, outcome: str) -> None:
     """Завершает попытку: проставляет итог и общую длительность."""
     for attempt in _ATTEMPTS.get(document_id, []):
         if attempt["attempt_id"] == str(attempt_id):

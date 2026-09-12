@@ -48,10 +48,10 @@ if __name__ == "__main__":
     if not DOCS_DIR.exists():
         print(f"Ошибка: директория {DOCS_DIR} не найдена")
         sys.exit(1)
-        
+
     types = load_doc_types()
     table = generate_table(types)
-    
+
     print("Сгенерированная таблица из YAML (для вставки в README/api.md):")
     print(table)
     print("-" * 40)

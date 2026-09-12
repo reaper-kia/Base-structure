@@ -65,10 +65,7 @@ def get_docx_renderer() -> DocxRenderer:
 
 def check_deadline(document: Document) -> bool:
     """Если дедлайн истёк, принудительно переводит документ в failed."""
-    if (
-        document.status == DocumentStatus.PROCESSING
-        and document.deadline is not None
-    ):
+    if document.status == DocumentStatus.PROCESSING and document.deadline is not None:
         if datetime.now(UTC) > document.deadline:
             document.status = DocumentStatus.FAILED
             document.stage = None
@@ -76,8 +73,7 @@ def check_deadline(document: Document) -> bool:
             document.error = {
                 "code": "timeout",
                 "message": (
-                    "Превышено время ожидания обработки. "
-                    "Попробуйте повторить."
+                    "Превышено время ожидания обработки. Попробуйте повторить."
                 ),
                 "recoverable": True,
             }
