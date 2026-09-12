@@ -138,13 +138,20 @@ services:
 
   ml_service:
     build:
-      context: .
-      dockerfile: ml_service/Dockerfile
+      # Dockerfile ML-сервиса написан под контекст самой папки
+      # (COPY requirements.txt ./, COPY src ./src, COPY artifacts ./artifacts).
+      # С context: . сборка брала бы корневые файлы бэкенда и падала на artifacts.
+      context: ./ml_service
+      dockerfile: Dockerfile
     environment:
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_TIMEOUT_SECONDS: "90"
       FALLBACK_ENABLED: "true"
+      MODEL_PATH: artifacts/model.joblib
+    volumes:
+      # Переобучил модель на хосте -> docker compose restart ml_service, без пересборки.
+      - ./ml_service/artifacts:/app/artifacts
     depends_on:
       - ollama
 

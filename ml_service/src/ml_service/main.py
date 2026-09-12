@@ -75,12 +75,13 @@ def create_app() -> FastAPI:
 
         llm_schema = build_strict_schema(request.requisite_keys)
         payload = {
-            "model": "qwen2.5:7b-instruct",
+            "model": settings.ollama_model,
             "prompt": final_prompt,
             "format": llm_schema,
             "stream": False,
             "options": {"temperature": 0.2}
         }
+        ollama_endpoint = f"{settings.ollama_url.rstrip('/')}/api/generate"
 
         max_attempts = 2
         is_fallback = False
@@ -93,14 +94,21 @@ def create_app() -> FastAPI:
         async with httpx.AsyncClient() as client:
             for attempt in range(max_attempts):
                 try:
-                    resp = await client.post("http://localhost:11434/api/generate", json=payload, timeout=90.0)
+                    resp = await client.post(ollama_endpoint, json=payload, timeout=settings.ollama_timeout_seconds)
                     # Если сервис отвалился (500)
                     if resp.status_code != 200:
                         reason_code = "model_unavailable"
                         raise ValueError("Model API error")
-                        
-                    current_result_data = json.loads(resp.json()["response"])
-                    
+
+                    # Невалидный (нераспарсиваемый) JSON — это ошибка СХЕМЫ, а не
+                    # недоступность модели (ML-06: коды должны различаться).
+                    try:
+                        current_result_data = json.loads(resp.json()["response"])
+                    except (ValueError, KeyError, TypeError):
+                        reason_code = "schema_invalid"
+                        logger.warning(f"Ответ модели не разобрался как JSON (попытка {attempt + 1})")
+                        continue
+
                     # ML-04: Строгая валидация JSON
                     if not validate_llm_response(current_result_data, request.requisite_keys):
                         reason_code = "schema_invalid"

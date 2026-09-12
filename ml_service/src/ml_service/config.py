@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     # отдаём заглушку. Демо не должно висеть.
     predict_timeout_seconds: float = 2.0
 
+    # LLM (Ollama) для /api/v1/process. В docker-сети хост НЕ localhost, а имя
+    # сервиса `ollama` — раньше адрес был захардкожен в main.py на localhost,
+    # из-за чего в собранном стеке сервис никогда не доходил до модели и всегда
+    # молча возвращал исходный текст (fallback). Значения берём из окружения
+    # (docker-compose уже прокидывает OLLAMA_URL / OLLAMA_MODEL).
+    ollama_url: str = "http://ollama:11434"
+    ollama_model: str = "qwen2.5:7b-instruct"
+    ollama_timeout_seconds: float = 90.0
+
     host: str = "0.0.0.0"
     port: int = 8100
 
