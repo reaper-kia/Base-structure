@@ -2,17 +2,20 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { usePollDocument } from '../../shared/hooks/usePollDocument';
+import { Banner } from '../../shared/ui/Banner';
 import { ProcessingScreen } from './ProcessingScreen';
 import { TimeoutScreen } from './TimeoutScreen';
+import { FailedScreen } from './FailedScreen';
 import { ResultScreen } from './ResultScreen';
 
 export function DocumentPage() {
-  const docTypes = useDocumentStore((state) => state.docTypes);
-  const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
   const { id } = useParams<{ id: string }>();
   const document = useDocumentStore((state) => state.document);
   const pollingTimedOut = useDocumentStore((state) => state.pollingTimedOut);
+  const transportError = useDocumentStore((state) => state.transportError);
+  const docTypes = useDocumentStore((state) => state.docTypes);
   const fetchDocument = useDocumentStore((state) => state.fetchDocument);
+  const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
   const reprocessDocument = useDocumentStore((state) => state.reprocessDocument);
 
   usePollDocument(id || null);
@@ -46,13 +49,24 @@ export function DocumentPage() {
     );
   }
 
+  const docTypeName =
+    docTypes.find((type) => type.id === document.doc_type)?.name ?? 'Документ';
+
   const showTimeout = pollingTimedOut && document.status === 'processing';
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', marginBottom: '8px' }}>
-        {docTypes.find((type) => type.id === document.doc_type)?.name ??
-          'Документ'}
+    <div>
+      {transportError && (
+        <div className="mb-4">
+          <Banner level="error">{transportError}</Banner>
+        </div>
+      )}
+
+      <h1
+        className="text-xl font-bold mb-4"
+        style={{ fontFamily: 'var(--font-serif)', color: 'var(--foreground)' }}
+      >
+        {docTypeName}
       </h1>
 
       {showTimeout ? (
@@ -60,25 +74,8 @@ export function DocumentPage() {
       ) : document.status === 'processing' ? (
         <ProcessingScreen document={document} />
       ) : document.status === 'failed' ? (
-        <section style={{ padding: '24px 0' }}>
-          <h2>Не удалось обработать документ</h2>
-          {document.error && <p>{document.error.message}</p>}
-          <button
-            type="button"
-            onClick={handleRetry}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            Повторить
-          </button>
-        </section>
-            ) : (
+        <FailedScreen document={document} onRetry={handleRetry} />
+      ) : (
         <ResultScreen document={document} />
       )}
     </div>

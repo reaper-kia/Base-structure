@@ -108,6 +108,7 @@ let devState: DevState = {
   model_version: 'qwen2.5:7b-instruct',
   templates_loaded: ['classic', 'modern'],
 };
+let templateBroken = false;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -656,7 +657,12 @@ export const mockApi = {
     return reprocessing;
   },
 
-  async renderDocument(id: string): Promise<{ blob: Blob; filename: string }> {
+  async renderDocument(id: string): Promise<{
+    blob: Blob;
+    filename: string;
+    fallback: boolean;
+    fallbackReason: string | null;
+  }> {  
     await delay(MOCK_DELAY);
     const doc = documents.get(id);
     if (!doc) {
@@ -671,7 +677,16 @@ export const mockApi = {
     const baseName = DOC_TYPE_FILE_NAMES[doc.doc_type] ?? 'document';
     const filename = `${baseName}-${formatDateForFilename(new Date())}.docx`;
 
-    return { blob, filename };
+    const fallback = templateBroken && doc.template_id === 'modern';
+
+    return {
+      blob,
+      filename,
+      fallback,
+      fallbackReason: fallback
+        ? 'Шаблон «modern» повреждён, применён «classic»'
+        : null,
+    };
   },
 
   async getTrace(id: string): Promise<TraceEntry[]> {
@@ -737,5 +752,16 @@ export const mockApi = {
     await delay(MOCK_DELAY / 2);
     devState = { ...devState, ai_force_failure: enabled };
     return { ...devState };
+  },
+
+    async getTemplateBroken(): Promise<boolean> {
+    await delay(MOCK_DELAY / 2);
+    return templateBroken;
+  },
+
+  async setTemplateBroken(enabled: boolean): Promise<{ template_broken: boolean }> {
+    await delay(MOCK_DELAY / 2);
+    templateBroken = enabled;
+    return { template_broken: enabled };
   },
 };

@@ -6,6 +6,7 @@ import { DegradedBanner } from './DegradedBanner';
 import { FactGuardBadge } from './FactGuardBadge';
 import { DiffView } from './diff/DiffView';
 import { RequisitesPanel } from './RequisitesPanel';
+import { Banner } from '../../shared/ui/Banner';
 
 interface ResultScreenProps {
   document: DocumentState;
@@ -15,6 +16,7 @@ export function ResultScreen({ document }: ResultScreenProps) {
   const renderDocument = useDocumentStore((state) => state.renderDocument);
   const patchRequisites = useDocumentStore((state) => state.patchRequisites);
   const isRendering = useDocumentStore((state) => state.isRendering);
+  const renderFallback = useDocumentStore((state) => state.renderFallback);
   const isPatchingRequisites = useDocumentStore(
     (state) => state.isPatchingRequisites
   );
@@ -31,6 +33,15 @@ export function ResultScreen({ document }: ResultScreenProps) {
       />
 
       {document.status === 'degraded' && <DegradedBanner />}
+
+      {renderFallback && <Banner level="info">{renderFallback}</Banner>}
+
+      {document.fact_guard && document.fact_guard.verdict !== 'clean' && (
+        <Banner level="warning">
+          Fact Guard не подтвердил сохранность всех фактов — проверьте текст
+          глазами.
+        </Banner>
+      )}
 
       <FactGuardBadge factGuard={document.fact_guard} />
 

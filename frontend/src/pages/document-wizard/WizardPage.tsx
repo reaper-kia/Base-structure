@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { usePollDocument } from '../../shared/hooks/usePollDocument';
+import { Banner } from '../../shared/ui/Banner';
 import { DraftInput } from './DraftInput';
 import { DocTypeSelector } from './DocTypeSelector';
 import { TemplateSelector } from './TemplateSelector';
@@ -56,17 +57,8 @@ export function WizardPage() {
   return (
     <div>
       {transportError && (
-        <div
-          role="alert"
-          className="mb-4 px-4 py-3 text-sm"
-          style={{
-            background: 'var(--banner-error-bg)',
-            border: '1px solid var(--banner-error-border)',
-            borderRadius: 'var(--radius)',
-            color: 'var(--banner-error-text)',
-          }}
-        >
-          {transportError}
+        <div className="mb-4">
+          <Banner level="error">{transportError}</Banner>
         </div>
       )}
 

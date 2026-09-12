@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { mockApi } from '../api/mock';
-import type { DocumentState, DocType, Template, MockScenario } from '../api/types';
+import type { DocumentState, DocType, Template, MockScenario, DevState } from '../api/types';
 
 interface WizardState {
   // Справочники
@@ -24,7 +24,11 @@ interface WizardState {
   isRendering: boolean;
   transportError: string | null;
   pollingTimedOut: boolean;
+  devState: DevState | null;
+  renderFallback: string | null;
   setPollingTimedOut: (value: boolean) => void;
+  loadDevState: () => Promise<void>;
+  setAiForceFailure: (enabled: boolean) => Promise<void>;
 
   // Actions
   setDraft: (value: string) => void;
@@ -55,6 +59,8 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
   isRendering: false,
   transportError: null,
   pollingTimedOut: false,
+  devState: null,
+  renderFallback: null,
   setPollingTimedOut: (value) => set({ pollingTimedOut: value }),
 
   setDraft: (value) => set({ draft: value }),
@@ -86,7 +92,12 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
       return;
     }
 
-    set({ isCreating: true, transportError: null, pollingTimedOut: false });
+    set({
+      isCreating: true,
+      transportError: null,
+      pollingTimedOut: false,
+      renderFallback: null,
+    });
     try {
       const document = await mockApi.createDocument({
         draft,
@@ -139,19 +150,38 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
   renderDocument: async (id) => {
     set({ isRendering: true, transportError: null });
     try {
-      const { blob, filename } = await mockApi.renderDocument(id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
+      const result = await mockApi.renderDocument(id);
+      set({ renderFallback: result.fallbackReason, isRendering: false });
+
+      const url = URL.createObjectURL(result.blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      link.click();
       URL.revokeObjectURL(url);
-      set({ isRendering: false });
     } catch {
       set({
         isRendering: false,
         transportError: 'Не удалось скачать документ',
       });
+    }
+  },
+
+    loadDevState: async () => {
+    try {
+      const devState = await mockApi.getDevState();
+      set({ devState, transportError: null });
+    } catch {
+      set({ transportError: 'Не удалось загрузить состояние dev-панели' });
+    }
+  },
+
+  setAiForceFailure: async (enabled) => {
+    try {
+      const devState = await mockApi.setAiForceFailure(enabled);
+      set({ devState });
+    } catch {
+      set({ transportError: 'Не удалось переключить режим отказа ИИ' });
     }
   },
 }));

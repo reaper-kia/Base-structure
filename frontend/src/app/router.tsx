@@ -8,6 +8,7 @@ import { WizardPage } from '../pages/document-wizard/WizardPage';
 import { DocumentPage } from '../pages/document-detail/DocumentPage';
 import { AppShell } from '../widgets/app-shell/AppShell';
 import { PublicLayout } from '../widgets/layout/PublicLayout';
+import { DevPanel } from '../pages/dev/DevPanel';
 
 export function AppRouter() {
   return (
@@ -20,6 +21,7 @@ export function AppRouter() {
         <Route element={<AppShell />}>
           <Route path="/wizard" element={<WizardPage />} />
           <Route path="/documents/:id" element={<DocumentPage />} />
+          <Route path="/dev" element={<DevPanel />} />
         </Route>
         <Route path="/login" element={<LoginPage />} />
         <Route

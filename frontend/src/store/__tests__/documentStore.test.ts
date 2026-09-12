@@ -53,4 +53,12 @@ describe('documentStore', () => {
     expect(templates.length).toBeGreaterThan(0);
     expect(templates[0].id).toBe('classic');
   });
+
+    it('сетевая ошибка не роняет приложение и ставит transportError', async () => {
+    const { fetchDocument } = useDocumentStore.getState();
+
+    await fetchDocument('definitely-missing-id');
+
+    expect(useDocumentStore.getState().transportError).toBeTruthy();
+  });
 });

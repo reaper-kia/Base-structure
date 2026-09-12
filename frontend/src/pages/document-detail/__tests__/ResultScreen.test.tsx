@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ResultScreen } from '../ResultScreen';
+import { useDocumentStore } from '../../../shared/store/documentStore';
 import type { DocumentState } from '../../../shared/api/types';
 
 function makeDocument(status: 'processed' | 'degraded' = 'processed'): DocumentState {
@@ -58,5 +59,23 @@ describe('ResultScreen', () => {
       'href',
       '/trace/doc-1'
     );
+  });
+
+    it('показывает плашку запасного шаблона уровнем информация', () => {
+    useDocumentStore.setState({
+      renderFallback: 'Шаблон «modern» повреждён, применён «classic»',
+    });
+
+    render(
+      <MemoryRouter>
+        <ResultScreen document={makeDocument()} />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText('Шаблон «modern» повреждён, применён «classic»')
+    ).toBeInTheDocument();
+
+    useDocumentStore.setState({ renderFallback: null });
   });
 });

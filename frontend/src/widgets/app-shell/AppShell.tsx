@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import { useDocumentStore } from '../../shared/store/documentStore';
 
 const STEPS = [
@@ -151,10 +151,17 @@ export function AppShell() {
         className="border-t py-3 flex-shrink-0"
         style={{ borderColor: 'var(--border)', background: 'var(--card)' }}
       >
-        <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-6 flex items-center justify-between gap-4 flex-wrap">
           <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
             Документ за 3 шага · ФСП Россия · 2026
           </span>
+          <Link
+            to="/dev"
+            className="text-xs underline"
+            style={{ color: 'var(--muted-foreground)' }}
+          >
+            Dev-панель
+          </Link>
           <span
             className="text-xs"
             style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-mono)' }}
