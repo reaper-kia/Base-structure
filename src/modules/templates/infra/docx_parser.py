@@ -12,9 +12,14 @@ JC_MAP = {"both": "justify", "left": "left", "center": "center", "right": "right
 
 DEFAULT_LAYOUT = [
     {"key": "addressee", "position": "top_right"},
+    {"key": "doc_date", "position": "top_left"},
+    {"key": "reg_number", "position": "top_left"},
     {"key": "subject", "position": "center", "bold": True},
     {"key": "body", "position": "body"},
+    {"key": "position", "position": "bottom_left"},
     {"key": "author", "position": "bottom_left"},
+    {"key": "signature", "position": "bottom_left"},
+    {"key": "executor", "position": "bottom_left"},
 ]
 
 

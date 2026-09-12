@@ -104,9 +104,9 @@ def test_no_llm_import_in_renderer() -> None:
 
     source = inspect.getsource(mod)
     for forbidden in ("ml_service", "llm", "gpt", "openai", "anthropic"):
-        assert forbidden not in source, (
-            f"рендерер не должен импортировать/использовать {forbidden}"
-        )
+        assert (
+            forbidden not in source
+        ), f"рендерер не должен импортировать/использовать {forbidden}"
 
 
 def test_render_from_revision_is_idempotent(renderer) -> None:

@@ -37,42 +37,42 @@ services:
       retries: 10
       start_period: 20s
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: hackathon_frontend
-    ports:
-      - "3000:80"
-    volumes:
-      - ./frontend/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      app:
-        condition: service_healthy
-      stt_service:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: hackathon_frontend
+  #   ports:
+  #     - "3000:80"
+  #   volumes:
+  #     - ./frontend/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
+  #   depends_on:
+  #     app:
+  #       condition: service_healthy
+  #     stt_service:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #     start_period: 5s
 
-  stt_service:
-    build:
-      context: ./stt-service
-      dockerfile: Dockerfile
-    container_name: hackathon_stt
-    ports:
-      - "8200:8200"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8200/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 15s
+  # stt_service:
+  #   build:
+  #     context: ./stt-service
+  #     dockerfile: Dockerfile
+  #   container_name: hackathon_stt
+  #   ports:
+  #     - "8200:8200"
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-fsS", "http://localhost:8200/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 6
+  #     start_period: 15s
 
   db:
     image: postgres:17-alpine
@@ -121,39 +121,39 @@ services:
         condition: service_healthy
     restart: "no"
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: hackathon_ollama
-    volumes:
-      - ollama_models:/root/.ollama
-    ports:
-      - "11434:11434"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: hackathon_ollama
+  #   volumes:
+  #     - ollama_models:/root/.ollama
+  #   ports:
+  #     - "11434:11434"
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "ollama", "list"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 12
+  #     start_period: 20s
 
-  ml_service:
-    build:
-      # Dockerfile ML-сервиса написан под контекст самой папки
-      # (COPY requirements.txt ./, COPY src ./src, COPY artifacts ./artifacts).
-      # С context: . сборка брала бы корневые файлы бэкенда и падала на artifacts.
-      context: ./ml_service
-      dockerfile: Dockerfile
-    environment:
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: qwen2.5:7b-instruct
-      OLLAMA_TIMEOUT_SECONDS: "90"
-      FALLBACK_ENABLED: "true"
-      MODEL_PATH: artifacts/model.joblib
-    volumes:
-      # Переобучил модель на хосте -> docker compose restart ml_service, без пересборки.
-      - ./ml_service/artifacts:/app/artifacts
-    depends_on:
-      - ollama
+  # ml_service:
+  #   build:
+  #     # Dockerfile ML-сервиса написан под контекст самой папки
+  #     # (COPY requirements.txt ./, COPY src ./src, COPY artifacts ./artifacts).
+  #     # С context: . сборка брала бы корневые файлы бэкенда и падала на artifacts.
+  #     context: ./ml_service
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     OLLAMA_URL: http://ollama:11434
+  #     OLLAMA_MODEL: qwen2.5:7b-instruct
+  #     OLLAMA_TIMEOUT_SECONDS: "90"
+  #     FALLBACK_ENABLED: "true"
+  #     MODEL_PATH: artifacts/model.joblib
+  #   volumes:
+  #     # Переобучил модель на хосте -> docker compose restart ml_service, без пересборки.
+  #     - ./ml_service/artifacts:/app/artifacts
+  #   depends_on:
+  #     - ollama
 
 volumes:
   postgres_data:
