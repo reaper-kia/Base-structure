@@ -1,133 +1,170 @@
 ---
-- name: Deploy
-  hosts: base_name
+# Разворачивает боевой стек «Документ за 3 шага» на чистом VPS с Ubuntu.
+#
+#   cd infra/ansible
+#   cp inventory/group_vars/doc3/secrets.yml.example inventory/group_vars/doc3/secrets.yml
+#   $EDITOR inventory/prod.yml inventory/group_vars/doc3/vars.yml
+#   ansible-playbook playbooks/deploy.yml
+#
+# Плейбук идемпотентен: повторный запуск обновляет код и перезапускает стек.
+- name: Deploy doc3
+  hosts: doc3
   become: true
   gather_facts: true
 
+  vars_files:
+    - ../inventory/group_vars/doc3/secrets.yml
+
   tasks:
-    - name: Install base packages
+    - name: Проверить, что секреты заданы
+      ansible.builtin.assert:
+        that:
+          - postgres_password is defined
+          - postgres_password != "replace-me"
+        fail_msg: >-
+          Заполните inventory/group_vars/doc3/secrets.yml —
+          без пароля базы стек не поднимется.
+
+    - name: Установить базовые пакеты
       ansible.builtin.apt:
         name:
           - git
           - curl
           - ca-certificates
+          - openssl
         state: present
         update_cache: true
-    
-    - name: Add Docker repository
+
+    - name: Подключить репозиторий Docker
       ansible.builtin.deb822_repository:
         name: docker
         types: deb
         uris: https://download.docker.com/linux/ubuntu
         suites: "{{ ansible_distribution_release }}"
         components: stable
-        architectures: amd64
+        architectures: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
         signed_by: https://download.docker.com/linux/ubuntu/gpg
         install_python_debian: true
       register: docker_repo
 
-    - name: Update apt cache
+    - name: Обновить кэш apt
       ansible.builtin.apt:
         update_cache: true
       when: docker_repo.changed
-    
-    - name: Install Docker
+
+    - name: Установить Docker
       ansible.builtin.apt:
-        name: 
+        name:
           - docker-ce
           - docker-ce-cli
           - containerd.io
           - docker-compose-plugin
           - docker-buildx-plugin
         state: present
-    
-    - name: Ensure Docker service is running
+
+    - name: Запустить Docker
       ansible.builtin.systemd_service:
         name: docker
         state: started
         enabled: true
-    
-    - name: Add reaper to docker group
+
+    - name: Добавить пользователя деплоя в группу docker
       ansible.builtin.user:
-        name: reaper
+        name: "{{ deploy_user }}"
         groups: docker
         append: true
-    
-    - name: Clone repository
+
+    - name: Создать каталог проекта
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
+
+    - name: Склонировать или обновить репозиторий
       ansible.builtin.git:
         repo: "{{ app_repo }}"
         dest: "{{ deploy_dir }}"
         version: "{{ app_version }}"
         update: true
-      become: false
-    
-    - name: Ensure TLS directory exists
+      become: true
+      become_user: "{{ deploy_user }}"
+
+    - name: Создать каталог сертификатов
       ansible.builtin.file:
         path: "{{ deploy_dir }}/certs"
         state: directory
-        owner: "{{ deploy_user}}"
-        group: "{{ deploy_user}}"
-        mode: '0755'
-    
-    - name: Copy TLS certificate
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../files/tls/localhost.crt"
-        dest: "{{ deploy_dir }}/certs/localhost.crt"
-        owner: root
-        group: root
-        mode: "0644"
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
 
-    - name: Copy TLS private key
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../files/tls/localhost.key"
-        dest: "{{ deploy_dir }}/certs/localhost.key"
-        owner: root
-        group: root
+    # Самоподписанный сертификат: стенд поднимается сразу, браузер покажет
+    # предупреждение. Для домена замените эти два файла сертификатом
+    # Let's Encrypt — см. README.md рядом.
+    - name: Проверить наличие сертификата
+      ansible.builtin.stat:
+        path: "{{ deploy_dir }}/certs/localhost.crt"
+      register: tls_cert
+
+    - name: Выпустить самоподписанный сертификат
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -sha256 -noenc -days 365
+          -keyout {{ deploy_dir }}/certs/localhost.key
+          -out {{ deploy_dir }}/certs/localhost.crt
+          -subj "/CN={{ ansible_host }}"
+          -addext "subjectAltName=IP:{{ ansible_host }}"
+      when: not tls_cert.stat.exists
+      changed_when: true
+
+    - name: Ограничить права на приватный ключ
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}/certs/localhost.key"
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
         mode: "0600"
-    
-    - name: Validate secrets
-      ansible.builtin.assert:
-        that:
-          - postgres_password is defined
-          - jwt_secret_key is defined
-          - admin_registration_code is defined
-        fail_msg: "Required application secrets are missing"
 
-    - name: Render production environment
+    - name: Развернуть .env.prod
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../templates/base.env.j2"
+        src: ../templates/prod.env.j2
         dest: "{{ deploy_dir }}/.env.prod"
         owner: "{{ deploy_user }}"
         group: "{{ deploy_user }}"
         mode: "0600"
-    
-    - name: Stop local application stack
-      community.docker.docker_compose_v2:
-        project_src: "{{ deploy_dir }}"
-        files: docker-compose.yml
-        state: absent
 
-    - name: Start production stack
+    - name: Поднять боевой стек
       community.docker.docker_compose_v2:
         project_src: "{{ deploy_dir }}"
         files: compose.prod.yml
         state: present
         build: always
         wait: true
-    
-    - name: Check application health
+
+    # Веса модели живут в томе и переживают пересоздание контейнеров,
+    # поэтому задача отрабатывает вхолостую на всех запусках, кроме первого.
+    - name: Скачать веса модели
+      ansible.builtin.command:
+        cmd: docker compose -f compose.prod.yml exec -T ollama ollama pull {{ ollama_model }}
+        chdir: "{{ deploy_dir }}"
+      register: ollama_pull
+      changed_when: "'success' in ollama_pull.stdout"
+      async: "{{ ollama_pull_timeout_seconds }}"
+      poll: 15
+
+    - name: Проверить приложение
       ansible.builtin.uri:
         url: https://127.0.0.1/health
         validate_certs: false
         status_code: 200
 
-    - name: Check database health
+    - name: Проверить базу
       ansible.builtin.uri:
         url: https://127.0.0.1/health/db
         validate_certs: false
         status_code: 200
 
-    - name: Check Redis health
+    - name: Проверить Redis
       ansible.builtin.uri:
         url: https://127.0.0.1/health/redis
         validate_certs: false

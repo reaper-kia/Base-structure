@@ -1,3 +1,6 @@
+# Шаблон A «Классический корпоративный».
+# Источник параметров — «Описание шаблонов оформления.docx» организаторов
+# (docs/organizer-materials/шаблоны/), раздел «ШАБЛОН A».
 name: "Классический корпоративный"
 description: "Традиционное деловое оформление: Times New Roman 14, поля 30/15/20/20 мм, интервал 1.5, красная строка 1.25 см"
 
@@ -19,21 +22,36 @@ spacing:
 alignment: justify
 
 header_footer:
+  # «Верхний — название организации». Значение берётся из настройки
+  # ORG_NAME; если её не задали, в документе останется явная пометка
+  # незаполненного реквизита — выдумывать название организации нельзя.
   header:
-    text: ""
+    text: "{org_name}"
+    font_family: "Times New Roman"
+    font_size_pt: 11
+  # «Нижний — номер страницы».
   footer:
     text: "Страница {page}"
     font_family: "Times New Roman"
     font_size_pt: 11
 
+# «Шапка справа — стиль «Адресат». Дата и номер сверху — стиль «Подпись1».
+# Заголовок — стиль «Заголовок». Подпись слева.»
 requisites_layout:
   - {key: addressee, position: top_right}
-  - {key: doc_date, position: top_left}
-  - {key: reg_number, position: top_left}
-  - {key: salutation, position: left}
+  - {key: author, position: top_right}
+  - key: date_number
+    type: line
+    position: top_left
+    parts:
+      - {label: "Дата:", key: doc_date}
+      - {label: "Номер:", key: reg_number}
+  - {key: doc_title, type: doc_title, position: center, bold: true}
   - {key: subject, position: center, bold: true}
+  - {key: salutation, position: left}
   - {key: body, position: body}
-  - {key: position, position: bottom_left}
-  - {key: author, position: bottom_left}
-  - {key: signature, position: bottom_left}
-  - {key: executor, position: bottom_left}
+  - key: signature_block
+    type: signature
+    position: bottom_left
+    keys: [position, signature]
+  - {key: executor, position: bottom_left, font_size_pt: 10}

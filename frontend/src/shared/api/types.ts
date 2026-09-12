@@ -28,8 +28,9 @@ export interface Template {
   id: string;
   name: string;
   description: string;
-  preview_url: string;
   available: boolean;
+  /** Превью шаблонов не генерируются: карточка описывает правила словами. */
+  preview_url?: string | null;
 }
 
 export interface ChangeItem {

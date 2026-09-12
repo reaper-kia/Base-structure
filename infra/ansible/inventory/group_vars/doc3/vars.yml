@@ -1,0 +1,33 @@
+---
+# Пользователь и каталог на сервере. deploy_user должен совпадать с
+# ansible_user из инвентаря — от его имени клонируется репозиторий и
+# работает docker compose.
+deploy_user: deploy
+deploy_dir: /opt/doc3
+
+# Репозиторий проекта.
+app_repo: https://github.com/CHANGE-ME/doc3.git
+app_version: main
+
+app_name: doc3
+app_env: production
+
+# Название организации в верхнем колонтитуле шаблона «Классический
+# корпоративный». Пока не заполнено — в документах останется явная
+# пометка незаполненного поля.
+org_name: "[Название организации]"
+
+postgres_host: db
+postgres_port: 5432
+postgres_db: doc3
+postgres_user: doc3
+
+redis_host: redis
+redis_port: 6379
+redis_db: 0
+
+ollama_model: qwen2.5:7b-instruct
+
+# Модель весит около 5 ГБ и тянется один раз. На медленном канале
+# увеличьте таймаут.
+ollama_pull_timeout_seconds: 3600

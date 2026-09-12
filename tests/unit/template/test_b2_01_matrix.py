@@ -116,8 +116,11 @@ def test_coverage_gap_caught_at_load(tmp_path: Path) -> None:
     rules = yaml.safe_load(
         (ASSETS / "classic" / "rules.yaml").read_text(encoding="utf-8")
     )
+    # Выкидываем блок подписи: вместе с ним из раскладки пропадают
+    # обязательные position и signature — ровно та дыра, которую загрузка
+    # шаблона обязана поймать до первого рендера.
     rules["requisites_layout"] = [
-        b for b in rules["requisites_layout"] if b.get("key") != "signature"
+        b for b in rules["requisites_layout"] if b.get("key") != "signature_block"
     ]
     (tpl / "rules.yaml").write_text(
         yaml.safe_dump(rules, allow_unicode=True), encoding="utf-8"

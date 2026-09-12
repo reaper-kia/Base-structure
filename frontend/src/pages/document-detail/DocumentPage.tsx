@@ -50,7 +50,7 @@ export function DocumentPage() {
           <>
             <Banner level="error">{transportError}</Banner>
             <div className="flex gap-3 flex-wrap">
-              <PrimaryButton onClick={() => navigate('/wizard')}>
+              <PrimaryButton onClick={() => navigate('/')}>
                 Создать новый документ
               </PrimaryButton>
               <PrimaryButton

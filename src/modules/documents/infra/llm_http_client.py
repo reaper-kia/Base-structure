@@ -57,6 +57,8 @@ class HttpLLMClient:
                 fact_guard=payload.get("fact_guard", {}),
                 is_fallback=payload.get("is_fallback", False),
                 model_version=payload.get("model_version", "unknown"),
+                latency_ms=payload.get("latency_ms"),
+                reason_code=payload.get("reason_code"),
             )
         except Exception as exc:  # noqa: BLE001
             raise LLMUnavailable(str(exc)) from exc

@@ -1,3 +1,6 @@
+# Шаблон B «Современный регламентный».
+# Источник параметров — «Описание шаблонов оформления.docx» организаторов
+# (docs/organizer-materials/шаблоны/), раздел «ШАБЛОН B».
 name: "Современный регламентный"
 description: "Лаконичное оформление: Arial 12, поля 25/20/15/15 мм, интервал 1.15, таблица-шапка «Кому / От кого»"
 
@@ -19,14 +22,19 @@ spacing:
 alignment: left
 
 header_footer:
+  # «Верхний — отсутствует».
   header:
     text: ""
+  # «Нижний — название документа и дата».
   footer:
     text: "{subject} | {doc_date}"
     font_family: "Arial"
     font_size_pt: 10
 
+# «Тема сверху слева. Блок «Кому / От кого» — таблица.
+# Подпись по центру.»
 requisites_layout:
+  - {key: doc_title, type: doc_title, position: top_left, bold: true}
   - {key: subject, position: top_left, bold: true}
   - key: address_table
     type: table
@@ -34,11 +42,16 @@ requisites_layout:
     rows:
       - {label: "Кому:", value_key: addressee}
       - {label: "От кого:", value_key: author}
-  - {key: doc_date, position: top_left}
-  - {key: reg_number, position: top_left}
+  - key: date_number
+    type: line
+    position: top_left
+    parts:
+      - {label: "Дата:", key: doc_date}
+      - {label: "Номер:", key: reg_number}
   - {key: salutation, position: left}
   - {key: body, position: body}
-  - {key: position, position: bottom_center}
-  - {key: author, position: bottom_center}
-  - {key: signature, position: bottom_center}
-  - {key: executor, position: bottom_center}
+  - key: signature_block
+    type: signature
+    position: bottom_center
+    keys: [position, signature]
+  - {key: executor, position: bottom_center, font_size_pt: 10}

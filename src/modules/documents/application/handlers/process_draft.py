@@ -113,6 +113,7 @@ async def run(
         doc.status = DocumentStatus.PROCESSING
         doc.stage = ProcessingStage.LLM
         doc.error = None
+        doc.reason_code = None
         now = datetime.now(UTC)
         doc.started_at = now
         doc.deadline = now + timedelta(seconds=settings.processing_deadline_seconds)
@@ -278,6 +279,7 @@ async def run(
             doc.changes = result.changes
             doc.fact_guard = result.fact_guard
             doc.is_fallback = result.is_fallback
+            doc.reason_code = result.reason_code
             doc.status = (
                 DocumentStatus.DEGRADED
                 if result.is_fallback

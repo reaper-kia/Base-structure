@@ -8,6 +8,7 @@ import zipfile
 import yaml
 from docx import Document
 
+from src.core.config import settings
 from src.modules.templates.domain.entities import Template
 from src.modules.templates.domain.exceptions import (
     TemplateMissingError,
@@ -19,6 +20,11 @@ from src.modules.templates.domain.value_objects import TemplateRules
 logger = logging.getLogger(__name__)
 
 DEFAULT_ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
+
+
+def user_templates_dir() -> Path:
+    """Каталог пользовательских шаблонов (монтируется томом, доступен на запись)."""
+    return Path(settings.user_templates_dir)
 DOC_TYPES_DIR = (
     Path(__file__).resolve().parents[2] / "documents" / "config" / "doc_types"
 )
@@ -41,13 +47,27 @@ def required_requisite_keys() -> set[str]:
 
 
 def layout_keys(rules: dict) -> set[str]:
+    """Все ключи реквизитов, у которых в раскладке есть место.
+
+    Реквизит может стоять и сам по себе, и внутри составного блока:
+    строки таблицы (`rows[].value_key`), строки «Дата: … Номер: …»
+    (`parts[].key`) и блока подписи (`keys[]`). Если не собирать их все,
+    проверка покрытия из B2-01 решит, что места нет, и объявит рабочий
+    шаблон недоступным.
+    """
     keys: set[str] = set()
+
     for block in rules.get("requisites_layout", []):
         if "key" in block:
             keys.add(block["key"])
         for row in block.get("rows", []):
             if "value_key" in row:
                 keys.add(row["value_key"])
+        for part in block.get("parts", []):
+            if "key" in part:
+                keys.add(part["key"])
+        keys.update(block.get("keys", []))
+
     keys.discard("body")
     return keys
 
@@ -115,24 +135,46 @@ def all_spec_keys() -> set[str]:
 
 
 class TemplateLoader:
-    def __init__(self, assets_dir: Path | str = DEFAULT_ASSETS_DIR) -> None:
+    """Читает шаблоны из двух каталогов: встроенных и загруженных.
+
+    Встроенные лежат в образе и доступны только на чтение — прод-контейнер
+    поднят с `read_only: true`. Шаблоны, которые загрузил пользователь,
+    живут в отдельном каталоге на томе. Имя встроенного шаблона переопределить
+    нельзя: иначе загрузкой файла можно было бы подменить classic.
+    """
+
+    def __init__(
+        self,
+        assets_dir: Path | str = DEFAULT_ASSETS_DIR,
+        user_dir: Path | str | None = None,
+    ) -> None:
         self._assets_dir = Path(assets_dir)
+        self._explicit_user_dir = Path(user_dir) if user_dir is not None else None
+
+    @property
+    def user_dir(self) -> Path:
+        """Читается на каждый вызов: загрузчик создаётся один раз при импорте,
+        а каталог может быть переопределён настройкой позже (и в тестах)."""
+        if self._explicit_user_dir is not None:
+            return self._explicit_user_dir
+        return user_templates_dir()
 
     def list_templates(self) -> list[Template]:
         templates: list[Template] = []
+        seen: set[str] = set()
 
-        if not self._assets_dir.exists():
-            return templates
-
-        for entry in sorted(self._assets_dir.iterdir()):
-            if not entry.is_dir():
+        for directory in (self._assets_dir, self.user_dir):
+            if not directory.is_dir():
                 continue
 
-            rules_path = entry / "rules.yaml"
-            if not rules_path.exists():
-                continue
+            for entry in sorted(directory.iterdir()):
+                if not entry.is_dir() or entry.name in seen:
+                    continue
+                if not (entry / "rules.yaml").exists():
+                    continue
 
-            templates.append(self._load_entry(entry))
+                seen.add(entry.name)
+                templates.append(self._load_entry(entry))
 
         return templates
 

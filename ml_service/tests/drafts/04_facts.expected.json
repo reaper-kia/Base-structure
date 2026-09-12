@@ -1,0 +1,27 @@
+{
+  "doc_type": "memo",
+  "doc_type_name": "Служебная записка",
+  "requisite_keys": [
+    "addressee",
+    "author",
+    "position",
+    "doc_date",
+    "reg_number",
+    "subject",
+    "signature"
+  ],
+  "requisites_must_be_null": [
+    "addressee",
+    "reg_number"
+  ],
+  "anchors_must_survive": [
+    "50 000 руб.",
+    "18.09.2026",
+    "Николаев Н.Н.",
+    "не позднее",
+    "только при"
+  ],
+  "anchors_must_not_appear": [],
+  "fact_guard_verdict": "clean",
+  "comment": "Сценарий 4: суммы, даты, ФИО и условия сохраняются дословно, условия не инвертируются."
+}

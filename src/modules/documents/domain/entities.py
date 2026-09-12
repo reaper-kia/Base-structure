@@ -39,6 +39,11 @@ class Document:
     requisites: list = field(default_factory=list)
     fact_guard: Optional[dict] = None
     is_fallback: bool = False
+    # Почему результат оказался резервным: model_unavailable, schema_invalid,
+    # facts_unverified, empty_text. Приходит из ml_service и доезжает до
+    # фронта — «ИИ не сработал» и «модель выдумала факты» это разные вещи,
+    # и пользователь должен видеть какая именно.
+    reason_code: Optional[str] = None
     error: Optional[dict] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     started_at: Optional[datetime] = None

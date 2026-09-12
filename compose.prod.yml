@@ -4,6 +4,14 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+# Боевой стек. Запуск:
+#   cp .env.example .env.prod && отредактировать секреты и ORG_NAME
+#   docker compose -f compose.prod.yml up -d --build
+#   docker compose -f compose.prod.yml exec ollama ollama pull qwen2.5:7b-instruct
+#
+# MAX-бот подключается отдельным профилем:
+#   docker compose -f compose.prod.yml --profile bot up -d
+
 services:
   app:
     mem_limit: 250m
@@ -13,13 +21,14 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     logging: *default-logging
-    container_name: hackathon_app
+    container_name: doc3_app
     env_file:
       - .env.prod
     environment:
       ML_SERVICE_URL: http://ml_service:8100
+      USER_TEMPLATES_DIR: /app/data/templates
     depends_on:
-      db: 
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -50,10 +59,15 @@ services:
       start_period: 10s
 
     restart: unless-stopped
-    
+
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
+    volumes:
+      # Единственный каталог, доступный приложению на запись: сюда
+      # складываются загруженные пользователем шаблоны. Остальной образ
+      # остаётся read-only.
+      - prod_user_templates:/app/data/templates
     cap_drop:
       - ALL
     security_opt:
@@ -71,7 +85,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     logging: *default-logging
-    container_name: hackathon_frontend
+    container_name: doc3_frontend
     ports:
       - "80:80"
       - "443:443"
@@ -101,7 +115,7 @@ services:
       context: ./stt-service
       dockerfile: Dockerfile
     logging: *default-logging
-    container_name: hackathon_stt
+    container_name: doc3_stt
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8200/health"]
@@ -124,7 +138,7 @@ services:
     cpus: 0.75
     pids_limit: 200
     image: postgres:17-alpine
-    container_name: hackathon_db
+    container_name: doc3_db
     logging: *default-logging
     env_file:
       - .env.prod
@@ -138,15 +152,14 @@ services:
     restart: unless-stopped
     networks:
       - backend
-  
+
   redis:
     mem_limit: 100m
     cpus: 0.25
     pids_limit: 100
     image: redis:7-alpine
     logging: *default-logging
-    container_name: hackathon_redis
-
+    container_name: doc3_redis
     volumes:
       - prod_redis_data:/data
     healthcheck:
@@ -162,26 +175,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-
-    container_name: hackathon_migrate
-
+    container_name: doc3_migrate
     env_file:
       - .env.prod
-
     command: alembic upgrade head
-
     depends_on:
       db:
         condition: service_healthy
-
     restart: "no"
-
     mem_limit: 200m
     cpus: 0.50
     pids_limit: 100
-
     logging: *default-logging
-
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -189,7 +194,6 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-
     networks:
       - backend
 
@@ -198,12 +202,14 @@ services:
     cpus: 2.0
     pids_limit: 200
     image: ollama/ollama:latest
-    container_name: hackathon_ollama
+    container_name: doc3_ollama
     logging: *default-logging
     volumes:
       - prod_ollama_models:/root/.ollama
-    ports:
-      - "11434:11434"
+    # Порт наружу не публикуется: модель доступна только из сети backend.
+    # Открытый 11434 — это незащищённый endpoint генерации на публичном IP.
+    expose:
+      - "11434"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "ollama", "list"]
@@ -218,9 +224,12 @@ services:
     mem_limit: 500m
     cpus: 0.5
     pids_limit: 100
+    # Контекст — папка сервиса: его Dockerfile ожидает requirements.txt и
+    # src/ в корне контекста. С context: . сборка брала бы файлы бэкенда.
     build:
-      context: .
-      dockerfile: ml_service/Dockerfile
+      context: ./ml_service
+      dockerfile: Dockerfile
+    container_name: doc3_ml
     logging: *default-logging
     environment:
       OLLAMA_URL: http://ollama:11434
@@ -231,13 +240,57 @@ services:
       ollama:
         condition: service_healthy
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/health/model', timeout=5)"]
+      # Проверяем /health, а не /health/model: сервис работоспособен в режиме
+      # деградации и без модели, перезапускать его за это нельзя.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=5)"
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
       start_period: 15s
     networks:
+      - backend
+
+  bot:
+    mem_limit: 150m
+    cpus: 0.25
+    pids_limit: 100
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: doc3_bot
+    profiles: ["bot"]
+    logging: *default-logging
+    env_file:
+      - bot/.env
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      # edge нужен для исходящих запросов к API мессенджера,
+      # backend — чтобы дойти до app:8000.
+      - edge
       - backend
 
 networks:
@@ -252,4 +305,5 @@ networks:
 volumes:
   prod_postgres_data:
   prod_redis_data:
-  prod_ollama_models:  # <-- НОВЫЙ ТОМ ДЛЯ ВЕСОВ МОДЕЛИ
+  prod_ollama_models:
+  prod_user_templates:

@@ -14,6 +14,7 @@ from src.modules.documents.domain.entities import Document
 from src.modules.documents.domain.enums import DocumentStatus
 from src.modules.documents.infra.llm_http_client import HttpLLMClient
 from src.modules.templates.application.renderer import TemplateDocxRenderer
+from src.modules.templates.application.template_service import TemplateLoader
 from src.shared.application.unit_of_work import UnitOfWorkFactory
 from src.shared.infra.redis.client import redis_client
 from src.shared.infra.redis.json_cache import RedisJsonCache
@@ -22,12 +23,11 @@ ProcessingHandler = Callable[..., Awaitable[None]]
 
 
 def template_exists(template_id: str) -> bool:
-    """Проверяет, существует ли шаблон с данным id."""
+    """Есть ли такой шаблон — среди встроенных или загруженных пользователем."""
     if Path(template_id).name != template_id:
         return False
 
-    rules_path = Path(settings.templates_dir) / template_id / "rules.yaml"
-    return rules_path.is_file()
+    return template_id in templates_loaded()
 
 
 def schedule_processing(
@@ -82,14 +82,8 @@ def check_deadline(document: Document) -> bool:
 
 
 def templates_loaded() -> list[str]:
-    """Возвращает список загруженных шаблонов."""
-    templates_dir = Path(settings.templates_dir)
-
-    if not templates_dir.is_dir():
-        return []
-
+    """Идентификаторы доступных шаблонов: встроенные плюс пользовательские."""
     return sorted(
-        entry.name
-        for entry in templates_dir.iterdir()
-        if entry.is_dir() and (entry / "rules.yaml").is_file()
+        template.id
+        for template in TemplateLoader(settings.templates_dir).list_templates()
     )

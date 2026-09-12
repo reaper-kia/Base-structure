@@ -10,6 +10,11 @@ class LLMResult:
     fact_guard: dict = field(default_factory=dict)
     is_fallback: bool = False
     model_version: str = "unknown"
+    # Сколько заняла обработка на стороне ml_service и почему результат
+    # оказался резервным (contracts/llm_contract.md §2). Оба поля уходят
+    # в журнал обработки и в ответ API.
+    latency_ms: float | None = None
+    reason_code: str | None = None
 
 
 class LLMClient(Protocol):

@@ -60,6 +60,7 @@ interface WizardState {
 
   isCreating: boolean;
   isPatchingRequisites: boolean;
+  isSavingText: boolean;
   isRendering: boolean;
   renderFallback: string | null;
   transportError: string | null;
@@ -80,6 +81,7 @@ interface WizardState {
   fetchDocumentSafe: (id: string, signal?: AbortSignal) => Promise<boolean>;
   resumePolling: () => void;
   patchRequisites: (values: Record<string, string | null>) => Promise<void>;
+  updateText: (improvedText: string) => Promise<void>;
   reprocessDocument: (id: string) => Promise<void>;
   renderDocument: (id: string) => Promise<void>;
 
@@ -105,6 +107,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
   isCreating: false,
   isPatchingRequisites: false,
+  isSavingText: false,
   isRendering: false,
   renderFallback: null,
   transportError: null,
@@ -223,6 +226,21 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
     } catch (error) {
       set({ isPatchingRequisites: false });
       throw error;
+    }
+  },
+
+  // Ручная правка текста не перезапускает обработку: модель уже отработала,
+  // меняется только содержимое, которое уйдёт в файл.
+  updateText: async (improvedText) => {
+    const { document } = get();
+    if (!document) return;
+
+    set({ isSavingText: true });
+    try {
+      const updated = await api.updateText(document.id, improvedText);
+      set({ document: updated, isSavingText: false, transportError: null });
+    } catch (error) {
+      set({ isSavingText: false, transportError: errorMessage(error) });
     }
   },
 

@@ -5,6 +5,7 @@ import { SectionHeader } from '../../shared/ui/SectionHeader';
 import { DegradedBanner } from './DegradedBanner';
 import { FactGuardBadge } from './FactGuardBadge';
 import { DiffView } from './diff/DiffView';
+import { TextEditor } from './TextEditor';
 import { RequisitesPanel } from './RequisitesPanel';
 import { Banner } from '../../shared/ui/Banner';
 
@@ -61,13 +62,13 @@ export function ResultScreen({ document }: ResultScreenProps) {
         </Banner>
       )}
 
-      <FactGuardBadge factGuard={document.fact_guard} />
-
       <DiffView
         draft={document.draft}
         improvedText={document.improved_text}
         changes={document.changes}
       />
+
+      <TextEditor improvedText={document.improved_text} />
 
       <RequisitesPanel
         requisites={document.requisites}

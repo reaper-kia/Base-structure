@@ -57,7 +57,6 @@ dist/
 # Project generated files
 project-tree.txt
 
-infra/ansible/files/tls/*.key
 # Секреты ansible: игнорируем в любой группе, шаблон .example коммитим
 infra/ansible/inventory/group_vars/*/secrets.yml
 !infra/ansible/inventory/group_vars/*/secrets.yml.example

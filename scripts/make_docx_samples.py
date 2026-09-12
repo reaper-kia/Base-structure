@@ -56,8 +56,12 @@ def generate_samples(out_dir: Path) -> list[Path]:
             )
             for r in spec.get("requisites", [])
         ]
+        # Название типа печатается отдельной строкой не у всех типов:
+        # у письма его нет (см. эталонные примеры организаторов).
+        doc_type_name = spec["name"] if spec.get("show_type_title", True) else ""
+
         for template_id in ("classic", "modern"):
-            data = renderer.render(DEMO_BODY, reqs, template_id)
+            data = renderer.render(DEMO_BODY, reqs, template_id, doc_type_name)
             path = out_dir / f"{spec_path.stem}__{template_id}.docx"
             path.write_bytes(data)
             written.append(path)

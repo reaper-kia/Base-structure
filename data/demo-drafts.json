@@ -1,0 +1,130 @@
+[
+  {
+    "file": "data/demo-drafts/report_1.txt",
+    "doc_type": "report",
+    "doc_type_name": "Докладная записка",
+    "source": "docs/organizer-materials/Черновики/Докладная записка/Докладная записка_1.txt",
+    "length": 552,
+    "preview": "Кому: Руководителю департамента продаж ООО «Ромашка» Сидорову С.С. От кого: специалист по контролю качества Ни"
+  },
+  {
+    "file": "data/demo-drafts/report_2.txt",
+    "doc_type": "report",
+    "doc_type_name": "Докладная записка",
+    "source": "docs/organizer-materials/Черновики/Докладная записка/Докладная записка_2.txt",
+    "length": 441,
+    "preview": "Кому: руководителю департамента продаж ООО Ромашка Сидорову С.С. От кого: специалист по контролю качества Нико"
+  },
+  {
+    "file": "data/demo-drafts/report_3.txt",
+    "doc_type": "report",
+    "doc_type_name": "Докладная записка",
+    "source": "docs/organizer-materials/Черновики/Докладная записка/Докладная записка_3.txt",
+    "length": 301,
+    "preview": "От кого: специалист по контролю качества Николаева Н.Н. Заголовок: О результатах проверки склада С 10 по 13 ма"
+  },
+  {
+    "file": "data/demo-drafts/report_4.txt",
+    "doc_type": "report",
+    "doc_type_name": "Докладная записка",
+    "source": "docs/organizer-materials/Черновики/Докладная записка/Докладная записка_4.txt",
+    "length": 331,
+    "preview": "Специалист по контролю качества Николаева Н.Н. докладывает: с 10 по 13 марта 2025 года проверен склад по адрес"
+  },
+  {
+    "file": "data/demo-drafts/reference_1.txt",
+    "doc_type": "reference",
+    "doc_type_name": "Информационная справка",
+    "source": "docs/organizer-materials/Черновики/Информационная справка/Информационная справка_1.txt",
+    "length": 574,
+    "preview": "Дата: 15.03.2025 Заголовок: О выполнении плана мероприятий за первый квартал 2025 года В рамках плана за первы"
+  },
+  {
+    "file": "data/demo-drafts/reference_2.txt",
+    "doc_type": "reference",
+    "doc_type_name": "Информационная справка",
+    "source": "docs/organizer-materials/Черновики/Информационная справка/Информационная справка_2.txt",
+    "length": 424,
+    "preview": "Дата 15.03.2025 Заголовок О выполнении плана мероприятий за первый квартал 2025 года Вообщем, отдел развития с"
+  },
+  {
+    "file": "data/demo-drafts/reference_3.txt",
+    "doc_type": "reference",
+    "doc_type_name": "Информационная справка",
+    "source": "docs/organizer-materials/Черновики/Информационная справка/Информационная справка_3.txt",
+    "length": 343,
+    "preview": "Заголовок: О выполнении плана мероприятий за первый квартал 2025 года Отделом развития выполнены задачи: обуче"
+  },
+  {
+    "file": "data/demo-drafts/reference_4.txt",
+    "doc_type": "reference",
+    "doc_type_name": "Информационная справка",
+    "source": "docs/organizer-materials/Черновики/Информационная справка/Информационная справка_4.txt",
+    "length": 298,
+    "preview": "Руководитель отдела развития Козлов К.К. сообщает: обучение прошли 24 сотрудника. Регламент внутреннего докуме"
+  },
+  {
+    "file": "data/demo-drafts/letter_1.txt",
+    "doc_type": "letter",
+    "doc_type_name": "Письмо",
+    "source": "docs/organizer-materials/Черновики/Письмо/Письмо_1.txt",
+    "length": 570,
+    "preview": "Кому: Генеральному директору ООО «Василёк» Фёдорову Ф.Ф. От кого: Генеральный директор ООО «Ромашка» Иванов И."
+  },
+  {
+    "file": "data/demo-drafts/letter_2.txt",
+    "doc_type": "letter",
+    "doc_type_name": "Письмо",
+    "source": "docs/organizer-materials/Черновики/Письмо/Письмо_2.txt",
+    "length": 462,
+    "preview": "Кому: генеральному директору ООО Василёк Фёдорову Ф.Ф. От кого: генеральный директор ООО Ромашка Иванов И.И. Д"
+  },
+  {
+    "file": "data/demo-drafts/letter_3.txt",
+    "doc_type": "letter",
+    "doc_type_name": "Письмо",
+    "source": "docs/organizer-materials/Черновики/Письмо/Письмо_3.txt",
+    "length": 291,
+    "preview": "От кого: Генеральный директор ООО «Ромашка» Иванов И.И. Дата: 16.03.2025 Тема: О сотрудничестве в сфере постав"
+  },
+  {
+    "file": "data/demo-drafts/letter_4.txt",
+    "doc_type": "letter",
+    "doc_type_name": "Письмо",
+    "source": "docs/organizer-materials/Черновики/Письмо/Письмо_4.txt",
+    "length": 263,
+    "preview": "Генеральный директор ООО «Ромашка» Иванов И.И. просит предоставить коммерческое предложение на 50 офисных стол"
+  },
+  {
+    "file": "data/demo-drafts/memo_1.txt",
+    "doc_type": "memo",
+    "doc_type_name": "Служебная записка",
+    "source": "docs/organizer-materials/Черновики/Служебная записка/Служебная записка_1.txt",
+    "length": 392,
+    "preview": "Кому: Генеральному директору ООО «Ромашка» Иванову И.И. От кого: начальник отдела аналитики Петров П.П. Дата: "
+  },
+  {
+    "file": "data/demo-drafts/memo_2.txt",
+    "doc_type": "memo",
+    "doc_type_name": "Служебная записка",
+    "source": "docs/organizer-materials/Черновики/Служебная записка/Служебная записка_2.txt",
+    "length": 397,
+    "preview": "Кому: генеральному директору ООО Ромашка Иванову И.И. От кого: начальник отдела аналитики Петров П.П. Дата 12."
+  },
+  {
+    "file": "data/demo-drafts/memo_3.txt",
+    "doc_type": "memo",
+    "doc_type_name": "Служебная записка",
+    "source": "docs/organizer-materials/Черновики/Служебная записка/Служебная записка_3.txt",
+    "length": 276,
+    "preview": "От кого: начальник отдела аналитики Петров П.П. Заголовок: О закупке офисной техники Прошу выделить средства н"
+  },
+  {
+    "file": "data/demo-drafts/memo_4.txt",
+    "doc_type": "memo",
+    "doc_type_name": "Служебная записка",
+    "source": "docs/organizer-materials/Черновики/Служебная записка/Служебная записка_4txt.txt",
+    "length": 273,
+    "preview": "Начальник отдела аналитики Петров П.П. сообщает: 12.03.2025 возникла необходимость закупки трёх компьютеров. О"
+  }
+]

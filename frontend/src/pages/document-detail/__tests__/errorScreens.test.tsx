@@ -98,20 +98,25 @@ describe('FE-11: экраны ошибок', () => {
     });
   });
 
-  it('три reason_code дают три разных текста', () => {
+  it('каждый reason_code даёт свой текст причины', () => {
     const { rerender } = render(<DegradedBanner reason="model_unavailable" />);
     expect(screen.getByText(/ИИ-компонент недоступен/)).toBeInTheDocument();
 
     rerender(<DegradedBanner reason="schema_invalid" />);
-    expect(screen.getByText(/Модель вернула некорректный ответ/)).toBeInTheDocument();
+    expect(screen.getByText(/в неверном формате/)).toBeInTheDocument();
 
     rerender(<DegradedBanner reason="facts_unverified" />);
-    expect(screen.getByText(/сохранность фактов/)).toBeInTheDocument();
+    expect(screen.getByText(/добавила сведения/)).toBeInTheDocument();
+
+    rerender(<DegradedBanner reason="empty_text" />);
+    expect(screen.getByText(/пустой текст/)).toBeInTheDocument();
   });
 
-  it('в резервном режиме сказано, что текст не исправлялся', () => {
+  it('в резервном режиме сказано, что факты не менялись', () => {
     render(<DegradedBanner reason="model_unavailable" />);
-    expect(screen.getByText(/Текст не исправлялся/)).toBeInTheDocument();
+
+    expect(screen.getByText(/без участия модели/)).toBeInTheDocument();
+    expect(screen.getByText(/ни один факт не изменён/)).toBeInTheDocument();
   });
 
   it('черновик на экране ошибки можно скопировать', async () => {

@@ -8,7 +8,6 @@ class TemplateItem(BaseModel):
     name: str
     description: str
     available: bool
-    preview_url: str | None = None
 
 
 class TemplateListResponse(BaseModel):

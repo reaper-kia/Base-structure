@@ -1,29 +1,41 @@
-# Test suite
+# Тесты бэкенда
 
-The suite is isolated from PostgreSQL, Redis, Kafka and Telegram. API tests use
-FastAPI dependency overrides; application tests use in-memory fakes and mocks.
-
-## Run everything
+Прогон изолирован от PostgreSQL, Redis и модели: API-тесты подменяют
+зависимости FastAPI, остальные работают на фейках из `fakes.py`.
 
 ```bash
-python -m pytest
+make test              # в контейнере
+pytest                 # локально, если поднято окружение
+pytest -m unit
+pytest -m api
 ```
 
-## Run by layer
+## Структура
 
-```bash
-python -m pytest -m unit
-python -m pytest -m api
-python -m pytest -m e2e
-```
+- `unit/documents/` — сущности, оркестратор пайплайна, реестр типов,
+  валидатор реквизитов, маппинг репозитория;
+- `unit/template/` — генератор DOCX: матрица «тип × шаблон», отсутствие
+  остатков образца, раскладка и параметры страницы, смена шаблона без
+  повторного вызова модели, честность описаний шаблонов;
+- `unit/infra/`, `unit/shared/` — адаптеры Redis, unit of work, медиатор;
+- `api/` — контракты запросов и ответов, коды ошибок, жизненный цикл
+  документа, работа с реквизитами, ручная правка текста, загрузка
+  шаблона, устойчивость при отказе ИИ.
 
-## Structure
+Тесты ИИ-слоя живут отдельно: `cd ml_service && pytest`.
 
-- `unit/` — domain objects, handlers, repository mappers, UoW, outbox,
-  notifications, Kafka/Redis adapters and migration metadata.
-- `api/` — request/response contracts, authorization boundaries and error
-  mapping without a real database.
-- `e2e/` — an in-memory scenario from catalog creation to preorder confirmation.
+## Что именно проверяется
 
-A failing test should be treated as a source-code regression or an unmet
-contract, not fixed by weakening the assertion.
+Каждый обязательный сценарий задания закрыт тестом:
+
+| Сценарий | Где |
+|---|---|
+| 1. Полный путь до DOCX | `api/test_document_lifecycle.py`, `unit/template/test_b2_01_matrix.py` |
+| 2 и 4. Обработка текста и сохранение фактов | `ml_service/tests/test_fact_guard.py`, `test_drafts.py` |
+| 3. Недостающие реквизиты | `api/test_requisites.py` |
+| 5. Типы документов и шаблоны | `unit/template/test_b2_01_matrix.py`, `test_b2_07_template_switch.py` |
+| 6. Обработка ошибок | `api/test_resilience.py` |
+| 7. Предпросмотр и правка (дополнительный) | `api/test_text_editing.py` |
+
+Падающий тест — это регресс или нарушенный контракт. Чинить его
+ослаблением проверки нельзя.

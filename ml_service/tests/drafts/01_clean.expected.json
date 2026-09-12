@@ -1,0 +1,27 @@
+{
+  "doc_type": "memo",
+  "doc_type_name": "Служебная записка",
+  "requisite_keys": [
+    "addressee",
+    "author",
+    "position",
+    "doc_date",
+    "reg_number",
+    "subject",
+    "signature"
+  ],
+  "requisites_must_be_null": [
+    "addressee",
+    "reg_number"
+  ],
+  "anchors_must_survive": [
+    "15.09.2026",
+    "14 календарных дней",
+    "Сидоров А.В."
+  ],
+  "anchors_must_not_appear": [
+    "№"
+  ],
+  "fact_guard_verdict": "clean",
+  "comment": "Черновик без дефектов: проверяем, что обработка ничего не ломает и не выдумывает адресата."
+}

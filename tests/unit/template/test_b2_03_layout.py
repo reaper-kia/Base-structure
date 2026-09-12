@@ -108,8 +108,67 @@ def test_modern_footer_has_real_subject_and_date(renderer) -> None:
 
 
 @pytest.mark.parametrize("template_id", TEMPLATE_IDS)
-def test_no_brackets_in_headers_footers(renderer, template_id) -> None:
+def test_no_unresolved_placeholders_in_headers_footers(
+    renderer, template_id, monkeypatch
+) -> None:
+    """В колонтитулах не остаётся ни токенов правил, ни плейсхолдеров образца.
+
+    Единственная легальная пометка в квадратных скобках — незаполненное
+    название организации, и она проверяется отдельно в B2-02.
+    """
+    from src.core import config
+
+    monkeypatch.setattr(config.settings, "org_name", "ООО «Тестовая»")
+
     doc = _render(renderer, template_id)
+
     for part in (doc.sections[0].header, doc.sections[0].footer):
         text = "\n".join(p.text for p in part.paragraphs)
         assert "[" not in text and "]" not in text
+        assert "{" not in text and "}" not in text
+
+
+@pytest.mark.parametrize("template_id", TEMPLATE_IDS)
+def test_type_title_is_printed_above_the_subject(renderer, template_id) -> None:
+    """Эталонные примеры организаторов печатают «СЛУЖЕБНАЯ ЗАПИСКА» над темой."""
+    data = renderer.render(BODY_MARKER, _reqs(), template_id, "Служебная записка")
+    texts = [p.text for p in Document(BytesIO(data)).paragraphs if p.text.strip()]
+
+    assert "СЛУЖЕБНАЯ ЗАПИСКА" in texts
+    assert texts.index("СЛУЖЕБНАЯ ЗАПИСКА") < texts.index(VALUES["subject"])
+
+
+@pytest.mark.parametrize("template_id", TEMPLATE_IDS)
+def test_type_title_is_skipped_when_type_does_not_ask_for_it(
+    renderer, template_id
+) -> None:
+    """У письма такой строки нет — тип сообщает это пустым doc_type_name."""
+    with_title = Document(
+        BytesIO(renderer.render(BODY_MARKER, _reqs(), template_id, "Письмо"))
+    )
+    without_title = Document(
+        BytesIO(renderer.render(BODY_MARKER, _reqs(), template_id, ""))
+    )
+
+    assert "ПИСЬМО" in [p.text for p in with_title.paragraphs]
+    assert "ПИСЬМО" not in [p.text for p in without_title.paragraphs]
+    assert len(without_title.paragraphs) == len(with_title.paragraphs) - 1
+
+
+@pytest.mark.parametrize("template_id", TEMPLATE_IDS)
+def test_signature_block_matches_organizer_format(renderer, template_id) -> None:
+    """«Подпись — должность, линия подписи, И.О. Фамилия»."""
+    texts = [p.text for p in _render(renderer, template_id).paragraphs if p.text.strip()]
+
+    position_index = texts.index(VALUES["position"])
+
+    assert texts[position_index + 1].startswith("____")
+
+
+def test_date_and_number_share_one_line(renderer) -> None:
+    """«Дата: 14.03.2025 Номер: 12-ДЗ» — одной строкой, как в эталоне."""
+    texts = [p.text for p in _render(renderer, "classic").paragraphs]
+    line = next(t for t in texts if "Дата:" in t)
+
+    assert VALUES["doc_date"] in line
+    assert VALUES["reg_number"] in line

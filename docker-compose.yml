@@ -1,15 +1,18 @@
-name: hackathon
+name: doc3
 
-# Основной запуск:
-#   docker compose up -d --build
-# Kafka и воркеры удалены: событийная шина не нужна сервису документов.
+# Локальный запуск:
+#   cp .env.example .env && docker compose up -d --build
+#   make pull-model          # один раз: ~5 ГБ весов в том ollama_models
+#
+# MAX-бот не входит в базовый стек: он требует токена и внешней сети.
+#   docker compose --profile bot up -d
 
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: hackathon_app
+    container_name: doc3_app
     env_file:
       - .env
     ports:
@@ -41,7 +44,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: hackathon_frontend
+    container_name: doc3_frontend
     ports:
       - "3000:80"
     volumes:
@@ -59,11 +62,13 @@ services:
       retries: 5
       start_period: 5s
 
+  # Распознавание речи (голосовой ввод черновика). Локальная модель Vosk,
+  # без внешних API — критерий «использование платного и проприетарного ПО».
   stt_service:
     build:
       context: ./stt-service
       dockerfile: Dockerfile
-    container_name: hackathon_stt
+    container_name: doc3_stt
     ports:
       - "8200:8200"
     restart: unless-stopped
@@ -76,7 +81,7 @@ services:
 
   db:
     image: postgres:17-alpine
-    container_name: hackathon_db
+    container_name: doc3_db
     env_file:
       - .env
     environment:
@@ -95,7 +100,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: hackathon_redis
+    container_name: doc3_redis
     ports:
       - "6379:6379"
     volumes:
@@ -110,7 +115,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: hackathon_migrate
+    container_name: doc3_migrate
     env_file:
       - .env
     volumes:
@@ -123,7 +128,7 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    container_name: hackathon_ollama
+    container_name: doc3_ollama
     volumes:
       - ollama_models:/root/.ollama
     ports:
@@ -137,23 +142,51 @@ services:
       start_period: 20s
 
   ml_service:
+    # Dockerfile ML-сервиса написан под контекст своей папки
+    # (COPY requirements.txt ./, COPY src ./src).
     build:
-      # Dockerfile ML-сервиса написан под контекст самой папки
-      # (COPY requirements.txt ./, COPY src ./src, COPY artifacts ./artifacts).
-      # С context: . сборка брала бы корневые файлы бэкенда и падала на artifacts.
       context: ./ml_service
       dockerfile: Dockerfile
+    container_name: doc3_ml
     environment:
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_TIMEOUT_SECONDS: "90"
       FALLBACK_ENABLED: "true"
-      MODEL_PATH: artifacts/model.joblib
-    volumes:
-      # Переобучил модель на хосте -> docker compose restart ml_service, без пересборки.
-      - ./ml_service/artifacts:/app/artifacts
+    ports:
+      - "8100:8100"
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health', timeout=5)"
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  # Бот в мессенджере MAX — альтернативный канал того же сценария.
+  # Отдельный профиль: без токена он не стартует, и базовый стек об этом
+  # знать не обязан.
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: doc3_bot
+    profiles: ["bot"]
+    env_file:
+      - bot/.env
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

@@ -1,0 +1,27 @@
+{
+  "doc_type": "memo",
+  "doc_type_name": "Служебная записка",
+  "requisite_keys": [
+    "addressee",
+    "author",
+    "position",
+    "doc_date",
+    "reg_number",
+    "subject",
+    "signature"
+  ],
+  "requisites_must_be_null": [
+    "addressee",
+    "reg_number"
+  ],
+  "anchors_must_survive": [
+    "1 октября 2026",
+    "Смирнов И.И."
+  ],
+  "anchors_must_not_appear": [
+    "Иванов",
+    "№"
+  ],
+  "fact_guard_verdict": "clean",
+  "comment": "Сценарий 3: адресата нет. Система обязана оставить null, а не подобрать правдоподобного."
+}

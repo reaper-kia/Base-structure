@@ -52,11 +52,30 @@ class DocumentResponse(BaseModel):
     requisites: list[RequisiteSchema] = Field(default_factory=list)
     fact_guard: dict | None = None
     is_fallback: bool = False
+    reason_code: str | None = None
     error: dict | None = None
 
 
 class UpdateRequisitesRequest(BaseModel):
     values: dict[str, str | None]
+
+
+class UpdateTextRequest(BaseModel):
+    """Ручная правка улучшенного текста перед генерацией файла.
+
+    Сценарий 7 задания. Правка пользователя — это его собственные сведения,
+    поэтому Fact Guard по ней не проходит: он защищает от выдумок модели,
+    а не запрещает человеку дописать в свой документ то, что он знает.
+    """
+
+    improved_text: str = Field(min_length=1, max_length=40000)
+
+    @field_validator("improved_text")
+    @classmethod
+    def text_must_contain_something(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Текст документа не должен быть пустым")
+        return value
 
 
 class ToggleAiFailureRequest(BaseModel):

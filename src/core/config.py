@@ -41,6 +41,17 @@ class Settings(BaseSettings):
     templates_dir: str = "src/modules/templates/assets"
     default_template_id: str = "classic"
 
+    # Шаблоны, загруженные пользователем. Отдельный каталог, потому что
+    # прод-контейнер поднят с read_only: true — писать в образ нельзя,
+    # а этот путь монтируется томом (см. compose.prod.yml).
+    user_templates_dir: str = "data/templates"
+
+    # Название организации в верхнем колонтитуле шаблона «Классический
+    # корпоративный» (организаторы: «Верхний — название организации»).
+    # Значение по умолчанию — плейсхолдер из эталонного шаблона: своё
+    # название сервис не выдумывает, его подставляет владелец стенда.
+    org_name: str = "[Название организации]"
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )

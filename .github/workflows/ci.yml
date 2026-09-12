@@ -7,8 +7,11 @@ on:
 
 jobs:
   backend:
-    name: Backend (Lint + Tests + Real Generator)
+    name: Backend (lint + tests)
     runs-on: ubuntu-latest
+    # Тесты подменяют зависимости и работают на фейках, но база и кэш
+    # поднимаются: так прогон не зависит от того, не забыл ли кто-то
+    # подмену в новом тесте.
     services:
       db:
         image: postgres:17-alpine
@@ -42,8 +45,7 @@ jobs:
       REDIS_HOST: localhost
       REDIS_PORT: "6379"
       REDIS_URL: redis://localhost:6379/0
-      # Отключаем реальный ИИ в тестах, чтобы не ходить в сеть.
-      # Тесты, которым нужен ЛЛМ, используют подмены (фэйки).
+      # Пустая строка = реального ИИ в тестах нет.
       ML_SERVICE_URL: ""
       APP_ENV: test
       # Кэш на 0 секунд, чтобы тесты не зависели от случайных попаданий.
@@ -60,26 +62,28 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install ruff
 
       - name: Lint (ruff)
-        run: ruff check src/ tests/
+        run: ruff check src/ tests/ scripts/ migrations/
 
       - name: Run tests
         run: pytest tests/ -v
 
-      # Сохраняем сгенерированные .docx при падении тестов генератора,
-      # чтобы B2 мог скачать их и увидеть дефект глазами (критерий 4.4).
-      - name: Upload failed DOCX artifacts
-        if: failure()
+      - name: Generate reference DOCX samples
+        run: python scripts/make_docx_samples.py
+
+      # Восемь эталонных файлов (4 типа x 2 шаблона) — материал для защиты
+      # и способ увидеть дефект оформления глазами (критерий 4.4).
+      - name: Upload DOCX samples
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: failed-docx-artifacts
+          name: docx-samples
           path: artifacts/
           if-no-files-found: ignore
 
   ml-service:
-    name: ML Service (Lint + Tests)
+    name: ML service (lint + tests)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -97,18 +101,42 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          # ruff не входит в requirements.txt ML-сервиса, ставим явно,
-          # чтобы линт не падал и не пропускался молча.
-          pip install ruff
 
       - name: Lint (ruff)
-        run: ruff check src/ tests/
+        run: ruff check src/ tests/ scripts/
 
+      # Ollama в CI нет — прогон идёт по ветке резервной обработки.
+      # Это самый строгий случай: гарантии контракта проверяются там,
+      # где модели не существует.
       - name: Run tests
         run: pytest
 
+  bot:
+    name: MAX bot (tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: bot/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: pytest tests -q
+
   frontend:
-    name: Frontend (Lint + Test + Build)
+    name: Frontend (lint + tests + build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -118,7 +146,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 

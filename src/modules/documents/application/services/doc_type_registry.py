@@ -22,6 +22,10 @@ class DocTypeSpec(BaseModel):
     name: str = Field(min_length=1)
     description: str = Field(min_length=1)
     structure_hint: str = Field(min_length=1)
+    # Печатать ли название типа отдельной строкой над заголовком.
+    # Оформление берётся из шаблона, а вот сам факт наличия такой строки —
+    # свойство типа документа: у письма её нет.
+    show_type_title: bool = True
     requisites: list[RequisiteSpec] = Field(min_length=1)
     auto_fillable: dict[str, str] = Field(default_factory=dict)
 

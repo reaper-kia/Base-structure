@@ -1,0 +1,26 @@
+{
+  "doc_type": "memo",
+  "doc_type_name": "Служебная записка",
+  "requisite_keys": [
+    "addressee",
+    "author",
+    "position",
+    "doc_date",
+    "reg_number",
+    "subject",
+    "signature"
+  ],
+  "requisites_must_be_null": [
+    "addressee",
+    "doc_date",
+    "reg_number"
+  ],
+  "anchors_must_survive": [],
+  "anchors_must_not_appear": [
+    "2026",
+    "№",
+    "руб"
+  ],
+  "fact_guard_verdict": "clean",
+  "comment": "Сценарий 2: просторечия и опечатки. Точной даты в черновике нет - её нельзя достроить."
+}

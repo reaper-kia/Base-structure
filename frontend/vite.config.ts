@@ -8,10 +8,10 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': 'http://localhost:8000',
-      '/auth': 'http://localhost:8000',
-      '/users': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
-      '/ws': { target: 'ws://localhost:8000', ws: true },
+      // Распознавание речи — отдельный сервис, а не бэкенд документов.
+      // Без этой строки голосовой ввод в dev-режиме уходит в 404.
+      '/stt': 'http://localhost:8200',
     },
   },
 })

@@ -84,6 +84,12 @@ export const httpApi: DocumentApi = {
       body: JSON.stringify({ values }),
     }),
 
+  updateText: (id, improvedText) =>
+    request<DocumentState>(`/documents/${id}/text`, {
+      method: 'PATCH',
+      body: JSON.stringify({ improved_text: improvedText }),
+    }),
+
   reprocessDocument: (id) =>
     request<DocumentState>(`/documents/${id}/reprocess`, { method: 'POST' }),
 

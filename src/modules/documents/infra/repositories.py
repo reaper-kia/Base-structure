@@ -56,8 +56,11 @@ def _to_model(doc: Document) -> DocumentModel:
         ],
         fact_guard=(dict(doc.fact_guard) if doc.fact_guard is not None else None),
         is_fallback=doc.is_fallback,
+        reason_code=doc.reason_code,
         error=(dict(doc.error) if doc.error is not None else None),
         created_at=doc.created_at,
+        started_at=doc.started_at,
+        deadline=doc.deadline,
     )
 
 
@@ -83,6 +86,9 @@ def _to_domain(row: DocumentModel) -> Document:
         ],
         fact_guard=(dict(row.fact_guard) if row.fact_guard is not None else None),
         is_fallback=row.is_fallback,
+        reason_code=row.reason_code,
         error=(dict(row.error) if row.error is not None else None),
         created_at=row.created_at,
+        started_at=row.started_at,
+        deadline=row.deadline,
     )

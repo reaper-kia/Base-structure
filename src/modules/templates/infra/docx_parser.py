@@ -10,12 +10,60 @@ TWIPS_PER_MM = 56.6929  # п. 7.2: pgMar хранит твипы, 1 мм = 56.7 
 
 JC_MAP = {"both": "justify", "left": "left", "center": "center", "right": "right"}
 
+# Расположение реквизитов из DOCX автоматически не вычитывается: в файле
+# лежат абзацы, а не смысл. Берём раскладку «Классического корпоративного» —
+# она покрывает обязательные реквизиты всех четырёх типов, поэтому
+# загруженный шаблон сразу проходит проверку покрытия и доступен в работе.
+# Пользователь может поправить rules.yaml руками.
 DEFAULT_LAYOUT = [
     {"key": "addressee", "position": "top_right"},
+    {"key": "author", "position": "top_right"},
+    {
+        "key": "date_number",
+        "type": "line",
+        "position": "top_left",
+        "parts": [
+            {"label": "Дата:", "key": "doc_date"},
+            {"label": "Номер:", "key": "reg_number"},
+        ],
+    },
+    {"key": "doc_title", "type": "doc_title", "position": "center", "bold": True},
     {"key": "subject", "position": "center", "bold": True},
+    {"key": "salutation", "position": "left"},
     {"key": "body", "position": "body"},
-    {"key": "author", "position": "bottom_left"},
+    {
+        "key": "signature_block",
+        "type": "signature",
+        "position": "bottom_left",
+        "keys": ["position", "signature"],
+    },
+    {"key": "executor", "position": "bottom_left", "font_size_pt": 10},
 ]
+
+# Плейсхолдеры колонтитулов образца («[Название организации] | [Дата]»)
+# превращаются в токены правил. Иначе на каждой странице загруженного
+# шаблона печаталась бы квадратная скобка вместо значения.
+PLACEHOLDER_PATTERN = re.compile(r"\[([^\]]+)\]")
+PLACEHOLDER_TOKENS = {
+    "название организации": "{org_name}",
+    "организация": "{org_name}",
+    "название документа": "{doc_type_name}",
+    "тип документа": "{doc_type_name}",
+    "дата": "{doc_date}",
+    "номер": "{reg_number}",
+    "тема": "{subject}",
+    "заголовок": "{subject}",
+    "номер страницы": "{page}",
+    "страница": "{page}",
+}
+
+
+def _placeholders_to_tokens(text: str) -> str:
+    def replace(match: re.Match) -> str:
+        name = match.group(1).strip().lower()
+        return PLACEHOLDER_TOKENS.get(name, match.group(0))
+
+    return PLACEHOLDER_PATTERN.sub(replace, text)
 
 
 class NotADocxError(ValueError):
@@ -122,6 +170,22 @@ def parse_docx_template(data: bytes) -> tuple[dict, list[str]]:
                     text = " ".join(
                         t.text or "" for t in part_root.iter(_w("t"))
                     ).strip()
+                    # Фигурные скобки из чужого файла сломали бы подстановку
+                    # токенов колонтитула — убираем их до маппинга.
+                    text = text.replace("{", "").replace("}", "")
+                    text = _placeholders_to_tokens(text)
+
+                    # Поле PAGE хранит номер отдельно от текста: в w:t лежит
+                    # закэшированное «1». Без этой ветки у загруженного
+                    # шаблона на каждой странице печаталась бы единица.
+                    has_page_field = any(
+                        "PAGE" in (node.text or "")
+                        for node in part_root.iter(_w("instrText"))
+                    )
+                    if has_page_field:
+                        text = re.sub(r"\b\d+\b", "", text).strip()
+                        text = f"{text} {{page}}".strip()
+
                     rules["header_footer"][kind]["text"] = text
                     break
 

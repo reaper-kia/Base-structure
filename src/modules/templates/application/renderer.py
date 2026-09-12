@@ -38,11 +38,13 @@ class TemplateDocxRenderer:
         improved_text: str,
         requisites: list[Requisite],
         template_id: str,
+        doc_type_name: str = "",
     ) -> RenderResult:
         content, template = self._renderer.render_with_meta(
             improved_text,
             requisites,
             template_id,
+            doc_type_name,
         )
         return RenderResult(
             content=content,

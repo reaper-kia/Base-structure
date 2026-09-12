@@ -44,13 +44,18 @@ function extractMessage(payload: unknown, status: number): string {
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const hasBody = options.body !== undefined;
+  // Для FormData Content-Type ставит браузер — вместе с boundary.
+  // Если задать его руками, сервер не разберёт multipart.
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const hasJsonBody = options.body !== undefined && !isFormData;
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
     },
   });
@@ -69,6 +74,12 @@ export const apiClient = {
     request<T>(endpoint, { method: 'GET', signal }),
   post: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+  /**
+   * multipart/form-data: заголовок Content-Type ставит браузер сам —
+   * вместе с boundary. Задать его вручную значит сломать разбор на сервере.
+   */
+  postForm: <T>(endpoint: string, form: FormData, signal?: AbortSignal) =>
+    request<T>(endpoint, { method: 'POST', body: form, signal }),
   patch: <T>(endpoint: string, body?: unknown) =>
     request<T>(endpoint, {
       method: 'PATCH',

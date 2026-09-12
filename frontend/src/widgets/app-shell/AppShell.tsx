@@ -107,7 +107,7 @@ export function AppShell() {
                   className="text-xs font-medium"
                   style={{ color: 'var(--header-on-muted)', letterSpacing: '0.04em' }}
                 >
-                  Портал государственных сервисов
+                  ИИ-конструктор служебных документов
                 </div>
                 <div
                   className="font-bold"
@@ -217,7 +217,7 @@ export function AppShell() {
       >
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between gap-4 flex-wrap">
           <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-            Документ за 3 шага · ФСП Россия · 2026
+            Документ за 3 шага · 2026
           </span>
           <Link
             to="/dev"
@@ -228,9 +228,9 @@ export function AppShell() {
           </Link>
           <span
             className="text-xs"
-            style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-mono)' }}
+            style={{ color: 'var(--muted-foreground)' }}
           >
-            ГОСТ Р 7.0.97-2016
+            Шаблоны: классический и современный
           </span>
         </div>
       </footer>

@@ -1,18 +1,27 @@
-from __future__ import annotations
-from typing import Annotated
-from fastapi import APIRouter
+"""Справочник шаблонов оформления и загрузка своего DOCX.
 
-from src.modules.templates.application.template_service import TemplateLoader
-from src.modules.templates.api.schemas import TemplateItem, TemplateListResponse
+Загрузка произвольного шаблона — расширение сверх обязательного минимума
+(задание, п. 1.6: «автоматический разбор произвольного загруженного
+DOCX-шаблона не является обязательным требованием, но будет существенным
+дополнительным преимуществом»).
+"""
+
+from __future__ import annotations
 
 import re
+from typing import Annotated
+
 import yaml
-from fastapi import File, HTTPException, UploadFile
-from src.modules.templates.application.template_service import DEFAULT_ASSETS_DIR
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from src.modules.templates.api.schemas import TemplateItem, TemplateListResponse
+from src.modules.templates.application.template_service import (
+    TemplateLoader,
+    user_templates_dir,
+)
 from src.modules.templates.infra.docx_parser import NotADocxError, parse_docx_template
 
-ASSETS_DIR = DEFAULT_ASSETS_DIR  # подменяется в тестах
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # п. 7.4: больше 10 МБ → 413
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 router = APIRouter()
 
@@ -25,28 +34,25 @@ _loader = TemplateLoader()
     summary="Справочник шаблонов оформления",
 )
 async def list_templates() -> TemplateListResponse:
-    templates = _loader.list_templates()
-
-    items = [
-        TemplateItem(
-            id=t.id,
-            name=t.name,
-            description=t.description,
-            available=t.available,
-            preview_url=f"/static/templates/{t.id}.png",
-        )
-        for t in templates
-    ]
-
-    return TemplateListResponse(templates=items)
+    return TemplateListResponse(
+        templates=[
+            TemplateItem(
+                id=template.id,
+                name=template.name,
+                description=template.description,
+                available=template.available,
+            )
+            for template in _loader.list_templates()
+        ]
+    )
 
 
 @router.post(
     "/api/templates/upload",
     status_code=201,
-    summary="Загрузка и автопарсинг DOCX-шаблона",
+    summary="Загрузка и автоматический разбор DOCX-шаблона",
 )
-async def upload_template(file: Annotated[UploadFile, File(...)]):
+async def upload_template(file: Annotated[UploadFile, File(...)]) -> dict:
     data = await file.read()
 
     if len(data) > MAX_UPLOAD_BYTES:
@@ -59,20 +65,40 @@ async def upload_template(file: Annotated[UploadFile, File(...)]):
             status_code=422, detail="Файл не является корректным DOCX"
         ) from None
 
+    # Каталог пользовательских шаблонов монтируется томом: образ приложения
+    # поднят с read_only: true, писать в assets нельзя.
+    target_dir = user_templates_dir()
+
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Каталог пользовательских шаблонов недоступен для записи. "
+                "Проверьте том USER_TEMPLATES_DIR."
+            ),
+        ) from exc
+
     base = (
         re.sub(r"[^a-z0-9]+", "-", (file.filename or "template").lower()).strip("-")
         or "template"
     )
+    # Имя встроенного шаблона занять нельзя: иначе загрузкой файла можно
+    # было бы подменить classic для всех пользователей.
+    reserved = {template.id for template in _loader.list_templates()}
+
     template_id, counter = base, 1
-    while (ASSETS_DIR / template_id).exists():
+    while template_id in reserved or (target_dir / template_id).exists():
         template_id = f"{base}-{counter}"
         counter += 1
 
-    folder = ASSETS_DIR / template_id
+    folder = target_dir / template_id
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "template.docx").write_bytes(data)
     (folder / "rules.yaml").write_text(
-        yaml.safe_dump(rules, allow_unicode=True, sort_keys=False), encoding="utf-8"
+        yaml.safe_dump(rules, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
     )
 
     return {

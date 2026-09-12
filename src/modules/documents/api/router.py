@@ -39,6 +39,7 @@ from src.modules.documents.api.schemas import (
     RequisiteSchema,
     ToggleAiFailureRequest,
     UpdateRequisitesRequest,
+    UpdateTextRequest,
 )
 from src.modules.documents.application.services.doc_type_registry import (
     get_doc_type,
@@ -139,6 +140,7 @@ def _to_response(document: Document) -> DocumentResponse:
         ],
         fact_guard=document.fact_guard,
         is_fallback=document.is_fallback,
+        reason_code=document.reason_code,
         error=document.error,
     )
 
@@ -299,6 +301,58 @@ async def update_requisites(
     return _to_response(document)
 
 
+@router.patch(
+    "/documents/{document_id}/text",
+    response_model=DocumentResponse,
+)
+async def update_text(
+    document_id: UUID,
+    payload: UpdateTextRequest,
+    uow_factory: UnitOfWorkFactory = Depends(get_unit_of_work_factory),
+) -> DocumentResponse:
+    """Сохраняет ручную правку улучшенного текста (сценарий 7).
+
+    Документ пересобирается из уже сохранённой ревизии: модель повторно
+    не вызывается, правка сразу уходит в DOCX.
+    """
+    async with uow_factory() as uow:
+        document = await uow.documents.get(document_id)
+
+        if document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Документ не найден",
+            )
+
+        if check_deadline(document):
+            await uow.documents.update(document)
+            await uow.commit()
+
+        if document.status == DocumentStatus.PROCESSING:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Документ ещё обрабатывается",
+            )
+
+        if document.improved_text is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Текст ещё не сформирован",
+            )
+
+        document.improved_text = payload.improved_text.strip()
+
+        await uow.documents.update(document)
+        await uow.commit()
+
+    trace_store.record_user_edit(
+        document_id,
+        {"length": len(document.improved_text or "")},
+    )
+
+    return _to_response(document)
+
+
 @router.post(
     "/documents/{document_id}/reprocess",
     response_model=DocumentResponse,
@@ -334,6 +388,7 @@ async def reprocess_document(
         document.status = DocumentStatus.PROCESSING
         document.stage = ProcessingStage.LLM
         document.error = None
+        document.reason_code = None
 
         await uow.documents.update(document)
         await uow.commit()
@@ -388,6 +443,7 @@ async def render_document(
             document.improved_text,
             document.requisites,
             document.template_id,
+            spec.name if spec.show_type_title else "",
         )
     except Exception as exc:  # noqa: BLE001
         trace_store.record_render(

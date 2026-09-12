@@ -18,7 +18,7 @@ export function FailedScreen({ document, onRetry }: FailedScreenProps) {
 
   const handleEditDraft = () => {
     setDraft(document.draft);
-    navigate('/wizard');
+    navigate('/');
   };
 
   const handleCopy = async () => {

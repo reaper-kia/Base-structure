@@ -1,86 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { PrimaryButton } from '../../shared/ui/PrimaryButton';
+import { SpeechInput } from '../../features/speech/SpeechInput';
+import { DEMO_DRAFTS, type DemoDraft } from '../../shared/api/demoDrafts';
 
 const MAX_LENGTH = 20_000;
 
 interface DraftInputProps {
   onNext: () => void;
 }
-
-const DEMO_DRAFTS = [
-  {
-    id: 'vacation',
-    title: 'Заявление на отпуск',
-    icon: '📋',
-    text: `Директору ООО «Ромашка» Петрову П.П.
-от менеджера отдела продаж Иванова И.И.
-
-заявленее
-
-прошу предоставить мне отпуск с 10 июня 2025 на 14 дней а то я уже задолбался работать без отдыха и хочу отдохнуть
-
-Иванов`,
-  },
-  {
-    id: 'report',
-    title: 'Докладная о перерасчёте',
-    icon: '📊',
-    text: `Директору ООО «Ромашка» Петрову П.П.
-от главного бухгалтера Сидоровой А.В.
-
-Докладная записка
-О перерасчёте заработной платы
-
-Довожу до Вашего сведения, что при начислении заработной платы за август 2025 года была допущена ошибка. Сотруднику Иванову И.И. была начислена сумма 45 000 рублей вместо 52 500 рублей.
-
-Прошу дать указание бухгалтерии произвести перерасчёт.
-
-Главный бухгалтер
-Сидорова А.В.
-05.09.2025`,
-  },
-  {
-    id: 'reference',
-    title: 'Справка с места работы',
-    icon: '📄',
-    text: `Справка
-
-Настоящая справка выдана Сидорову Алексею Петровичу в том, что он действительно работает в ООО «ТехноПром» с 15 марта 2020 года по настоящее время в должности инженера-программиста.
-
-Среднемесячный заработок за последние 12 месяцев составляет 85 000 рублей.
-
-Справка выдана для предъявления по месту требования.
-
-Директор
-Козлов Д.В.
-12.09.2026`,
-  },
-  {
-    id: 'letter',
-    title: 'Коммерческое предложение',
-    icon: '✉️',
-    text: `Уважаемый Александр Николаевич!
-
-ООО «ТехноПром» обращается к Вам с предложением о сотрудничестве в области поставки программного обеспечения для автоматизации документооборота.
-
-Просим рассмотреть наше коммерческое предложение и дать ответ в течение 10 рабочих дней. Общая стоимость предлагаемого решения составляет 1 250 000 рублей.
-
-С уважением,
-Директор ООО «ТехноПром»
-Козлов Д.В.`,
-  },
-  {
-    id: 'long',
-    title: 'Длинный текст (5000+ символов)',
-    icon: '📚',
-    text: Array(20)
-      .fill(
-        'Настоящим докладываю, что в ходе проведения плановой проверки документации было выявлено значительное количество замечаний, требующих немедленного устранения. В частности, речь идёт о систематическом нарушении сроков предоставления отчётности, а также о несоответствии оформления документов установленным требованиям. Прошу принять меры по устранению выявленных недостатков в кратчайшие сроки.'
-      )
-      .join('\n\n'),
-  },
-];
 
 export function DraftInput({ onNext }: DraftInputProps) {
   const draft = useDocumentStore((state) => state.draft);
@@ -109,9 +37,17 @@ export function DraftInput({ onNext }: DraftInputProps) {
     }
   };
 
-  const loadDemo = (text: string) => {
-    setDraft(text);
+  const loadDemo = (demo: DemoDraft) => {
+    setDraft(demo.text);
+    // Черновик организаторов уже знает, какой это тип документа —
+    // не заставляем пользователя угадывать его на следующем шаге.
+    setDocType(demo.docType);
     setPasteError(null);
+  };
+
+  const appendTranscript = (text: string) => {
+    const separator = draft.trim() ? '\n' : '';
+    setDraft((draft + separator + text).slice(0, MAX_LENGTH));
   };
 
   const canContinue = draft.trim().length >= 10 && draft.length <= MAX_LENGTH;
@@ -185,7 +121,7 @@ export function DraftInput({ onNext }: DraftInputProps) {
             className="block text-xs font-semibold uppercase tracking-widest mb-2"
             style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
           >
-            Примеры черновиков
+            Черновики организаторов
           </div>
           <div className="space-y-2">
             <button
@@ -200,14 +136,16 @@ export function DraftInput({ onNext }: DraftInputProps) {
                 color: 'var(--foreground)',
               }}
             >
-              📋 Вставить из буфера
+              Вставить из буфера
             </button>
+            <SpeechInput onTranscript={appendTranscript} />
             {DEMO_DRAFTS.map((demo) => (
               <button
                 key={demo.id}
                 type="button"
-                onClick={() => loadDemo(demo.text)}
-                aria-label={`Загрузить пример: ${demo.title}`}
+                onClick={() => loadDemo(demo)}
+                aria-label={`Загрузить пример: ${demo.label}`}
+                title={demo.hint}
                 className="w-full text-left px-3 py-2.5 text-xs transition-all"
                 style={{
                   background: 'var(--card)',
@@ -216,13 +154,12 @@ export function DraftInput({ onNext }: DraftInputProps) {
                   color: 'var(--muted-foreground)',
                 }}
               >
-                <span className="mr-1.5 inline-flex">{demo.icon}</span>
-                <span className="font-medium">{demo.title}</span>
+                <span className="font-medium">{demo.label}</span>
                 <span
-                  className="block mt-0.5 line-clamp-2 opacity-70"
+                  className="block mt-0.5 opacity-70"
                   style={{ fontSize: '0.68rem' }}
                 >
-                  {demo.text.substring(0, 60)}…
+                  {demo.hint}
                 </span>
               </button>
             ))}

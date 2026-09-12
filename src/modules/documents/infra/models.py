@@ -51,6 +51,11 @@ class DocumentModel(Base):
         default=False,
     )
 
+    reason_code: Mapped[Optional[str]] = mapped_column(
+        String(32),
+        nullable=True,
+    )
+
     error: Mapped[Optional[dict]] = mapped_column(
         JSON,
         nullable=True,
@@ -59,6 +64,15 @@ class DocumentModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
+    )
+
+    # started_at и deadline обязаны храниться, а не жить в памяти процесса:
+    # проверку дедлайна делает тот запрос, который первым увидел документ,
+    # а это может быть другой воркер. Без сохранения документ, чья фоновая
+    # задача умерла, навсегда оставался бы в processing.
+    started_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     deadline: Mapped[Optional[datetime]] = mapped_column(

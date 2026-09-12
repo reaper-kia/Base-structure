@@ -2,12 +2,12 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 
 pydantic-settings==2.7.1
+# Загрузка пользовательского DOCX-шаблона идёт multipart-формой.
 python-multipart==0.0.20
 
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.31.0
 alembic==1.14.0
-
 
 # HTTP-клиент для походов в ml_service (httpx нужен и для тестов FastAPI)
 httpx==0.28.1
@@ -19,8 +19,6 @@ ruff==0.8.4
 mypy==1.5.1
 
 redis==8.0.0
-aiokafka==0.14.0
-
 
 # Генерация DOCX и чтение правил шаблона
 python-docx==1.1.2

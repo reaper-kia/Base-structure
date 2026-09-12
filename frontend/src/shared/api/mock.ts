@@ -627,6 +627,22 @@ export const mockApi: DocumentApi = {
     return updated;
   },
 
+  async updateText(id: string, improvedText: string): Promise<DocumentState> {
+    await delay(MOCK_DELAY);
+    const doc = documents.get(id);
+    if (!doc) {
+      throw new Error('Документ не найден');
+    }
+
+    if (doc.status === 'processing') {
+      throw new Error('Документ ещё обрабатывается');
+    }
+
+    const updated: DocumentState = { ...doc, improved_text: improvedText };
+    documents.set(id, updated);
+    return updated;
+  },
+
   async reprocessDocument(id: string): Promise<DocumentState> {
     await delay(MOCK_DELAY);
     const doc = documents.get(id);

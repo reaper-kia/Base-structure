@@ -27,4 +27,11 @@ class DocxRenderer(Protocol):
         improved_text: str,
         requisites: list[Requisite],
         template_id: str,
-    ) -> RenderResult: ...
+        doc_type_name: str = "",
+    ) -> RenderResult:
+        """doc_type_name печатается заголовком («СЛУЖЕБНАЯ ЗАПИСКА»).
+
+        Пустая строка = тип документа не просит печатать своё название:
+        письмо в эталонных примерах организаторов начинается сразу с темы.
+        """
+        ...

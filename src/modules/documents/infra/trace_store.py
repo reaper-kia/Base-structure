@@ -61,6 +61,20 @@ def update_attempt_meta(document_id: UUID, attempt_id: UUID, **meta: Any) -> Non
             return
 
 
+def record_user_edit(document_id: UUID, payload: Any) -> None:
+    """Ручная правка текста пользователем — тоже часть истории документа."""
+    attempts = _ATTEMPTS.get(document_id)
+    if not attempts:
+        return
+    attempts[-1]["stages"].append(
+        {
+            "stage": "user_edit",
+            "payload": payload,
+            "duration_ms": None,
+        }
+    )
+
+
 def record_render(document_id: UUID, payload: Any) -> None:
     """Дописывает стадию рендера в последнюю попытку документа."""
     attempts = _ATTEMPTS.get(document_id)

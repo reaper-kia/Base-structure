@@ -1,0 +1,33 @@
+{
+  "doc_type": "report",
+  "doc_type_name": "Докладная записка",
+  "requisite_keys": [
+    "addressee",
+    "author",
+    "position",
+    "doc_date",
+    "reg_number",
+    "subject",
+    "signature"
+  ],
+  "requisites_must_be_null": [
+    "addressee",
+    "reg_number"
+  ],
+  "anchors_must_survive": [
+    "315 000 руб.",
+    "85 000 руб.",
+    "240 000 руб.",
+    "60 000 руб.",
+    "700 000 руб.",
+    "30 ноября 2026",
+    "15 декабря 2026",
+    "25 сентября 2026",
+    "Ковалёв А.А.",
+    "не позднее",
+    "только при"
+  ],
+  "anchors_must_not_appear": [],
+  "fact_guard_verdict": "clean",
+  "comment": "Устойчивость на связном тексте 3000+ символов: ни один факт не теряется."
+}

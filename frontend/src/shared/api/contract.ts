@@ -26,6 +26,8 @@ export interface DocumentApi {
     id: string,
     values: Record<string, string | null>
   ): Promise<DocumentState>;
+  /** Ручная правка улучшенного текста перед генерацией файла (сценарий 7). */
+  updateText(id: string, improvedText: string): Promise<DocumentState>;
   reprocessDocument(id: string): Promise<DocumentState>;
   renderDocument(id: string): Promise<RenderResult>;
   getTrace(id: string): Promise<TraceEntry[]>;

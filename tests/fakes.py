@@ -10,9 +10,8 @@ from src.modules.documents.application.ports.llm_client import LLMResult
 class FakeUoW:
     """Small asynchronous unit-of-work double shared by unit tests."""
 
-    def __init__(self, *, documents: Any, outbox: Any | None = None) -> None:
+    def __init__(self, *, documents: Any) -> None:
         self.documents = documents
-        self.outbox = outbox
         self.commit = AsyncMock()
         self.rollback = AsyncMock()
 
@@ -115,12 +114,14 @@ class FakeDocxRenderer:
         improved_text: str,
         requisites: list[Requisite],
         template_id: str,
+        doc_type_name: str = "",
     ) -> RenderResult:
         self.calls.append(
             {
                 "improved_text": improved_text,
                 "requisites": requisites,
                 "template_id": template_id,
+                "doc_type_name": doc_type_name,
             }
         )
 

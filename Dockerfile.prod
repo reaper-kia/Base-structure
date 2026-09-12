@@ -31,6 +31,12 @@ COPY --chown=app:app src ./src
 COPY --chown=app:app migrations ./migrations
 COPY --chown=app:app alembic.ini ./alembic.ini
 
+# Каталог для шаблонов, загруженных пользователем. Создаётся с владельцем
+# app ДО монтирования тома: именованный том наследует права точки
+# монтирования из образа, иначе контейнер под непривилегированным
+# пользователем не сможет в него писать.
+RUN mkdir -p /app/data/templates && chown -R app:app /app/data
+
 USER app
 
 EXPOSE 8000

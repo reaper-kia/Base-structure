@@ -1,18 +1,29 @@
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../../app/providers/LanguageProvider';
 
 export function NotFoundPage() {
-  const { language, t } = useLanguage();
   return (
-    <section className="not-found">
-      <span>404</span>
-      <h1>{language === 'ru' ? 'Страница не найдена' : 'Page not found'}</h1>
-      <p>
-        {language === 'ru'
-          ? 'Возможно, ссылка устарела или адрес введён с ошибкой.'
-          : 'The link may be outdated or the address mistyped.'}
+    <section className="text-center py-16">
+      <div
+        className="text-5xl font-bold mb-3"
+        style={{ color: 'var(--muted-foreground)' }}
+      >
+        404
+      </div>
+      <h1 className="text-xl font-semibold mb-2">Страница не найдена</h1>
+      <p className="text-sm mb-6" style={{ color: 'var(--muted-foreground)' }}>
+        Возможно, ссылка устарела или адрес введён с ошибкой.
       </p>
-      <Link className="button button--primary" to="/">{t('home')}</Link>
+      <Link
+        to="/"
+        className="inline-block px-5 py-2.5 text-sm font-semibold"
+        style={{
+          background: 'var(--primary)',
+          color: '#fff',
+          borderRadius: 'var(--radius)',
+        }}
+      >
+        Вернуться к созданию документа
+      </Link>
     </section>
   );
 }
