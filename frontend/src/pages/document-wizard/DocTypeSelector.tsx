@@ -1,4 +1,6 @@
 import { useDocumentStore } from '../../shared/store/documentStore';
+import { FieldLabel } from '../../shared/ui/FieldLabel';
+import { DocIcon, type DocIconId } from '../../shared/ui/docIcons';
 
 export function DocTypeSelector() {
   const docTypes = useDocumentStore((state) => state.docTypes);
@@ -6,62 +8,79 @@ export function DocTypeSelector() {
   const setDocType = useDocumentStore((state) => state.setDocType);
 
   return (
-    <section style={{ marginBottom: '32px' }}>
-      <h2 style={{ margin: '0 0 4px 0', fontSize: '20px' }}>
-        Что за документ
-      </h2>
-      <p style={{ margin: '0 0 12px 0', color: '#666', fontSize: '14px' }}>
-        Выберите тип — он определяет структуру и обязательные поля
-      </p>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: '12px',
-        }}
-      >
+    <div className="mb-6">
+      <FieldLabel>Что за документ — структура и обязательные поля</FieldLabel>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {docTypes.map((type) => {
-          const isSelected = docType === type.id;
+          const selected = docType === type.id;
           return (
-            <div
+            <button
               key={type.id}
-              role="button"
-              tabIndex={0}
-              aria-pressed={isSelected}
+              type="button"
+              data-testid={`doc-type-${type.id}`}
               onClick={() => setDocType(type.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setDocType(type.id);
-                }
-              }}
+              aria-pressed={selected}
+              className="text-left p-3 transition-all"
               style={{
-                padding: '16px',
-                border: isSelected ? '2px solid #007bff' : '1px solid #ddd',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                backgroundColor: isSelected ? '#e7f3ff' : 'white',
-                transition: 'border-color 0.15s, background-color 0.15s',
+                background: selected ? 'var(--primary)' : 'var(--card)',
+                border: selected
+                  ? '2px solid var(--primary)'
+                  : '2px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                color: selected ? '#fff' : 'var(--foreground)',
               }}
             >
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '16px' }}>
+              <div
+                className="mb-3 flex items-center justify-center w-11 h-11 rounded-xl"
+                style={{
+                  background: selected
+                    ? 'rgba(255,255,255,0.15)'
+                    : 'var(--muted)',
+                  border: selected
+                    ? '1.5px solid rgba(255,255,255,0.25)'
+                    : '1.5px solid var(--border)',
+                }}
+              >
+                <DocIcon
+                  id={type.id as DocIconId}
+                  color={selected ? '#fff' : 'var(--primary)'}
+                />
+              </div>
+              <div className="text-sm font-semibold leading-tight mb-1">
                 {type.name}
-              </h3>
-              <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#666' }}>
+              </div>
+              <div
+                className="text-xs leading-tight"
+                style={{
+                  color: selected
+                    ? 'rgba(255,255,255,0.6)'
+                    : 'var(--muted-foreground)',
+                }}
+              >
                 {type.description}
-              </p>
-              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#888' }}>
-                {type.requisites
-                  .filter((r) => r.required)
-                  .map((r) => (
-                    <li key={r.key}>{r.label}</li>
-                  ))}
-              </ul>
-            </div>
+              </div>
+              {selected && (
+                <div
+                  className="mt-2 flex items-center gap-1 text-xs font-semibold"
+                  style={{ color: '#0DC268' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="6" fill="#0DC268" />
+                    <path
+                      d="M3.5 6l1.8 1.8L8.5 4.5"
+                      stroke="white"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Выбрано
+                </div>
+              )}
+            </button>
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }

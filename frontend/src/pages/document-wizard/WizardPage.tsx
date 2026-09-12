@@ -5,29 +5,28 @@ import { usePollDocument } from '../../shared/hooks/usePollDocument';
 import { DraftInput } from './DraftInput';
 import { DocTypeSelector } from './DocTypeSelector';
 import { TemplateSelector } from './TemplateSelector';
+import { SectionHeader } from '../../shared/ui/SectionHeader';
+import { PrimaryButton } from '../../shared/ui/PrimaryButton';
 
 export function WizardPage() {
   const navigate = useNavigate();
-  const {
-    draft,
-    docType,
-    templateId,
-    document,
-    isCreating,
-    transportError,
-    loadDocTypes,
-    loadTemplates,
-    createDocument,
-  } = useDocumentStore();
+  const draft = useDocumentStore((state) => state.draft);
+  const docType = useDocumentStore((state) => state.docType);
+  const templateId = useDocumentStore((state) => state.templateId);
+  const document = useDocumentStore((state) => state.document);
+  const isCreating = useDocumentStore((state) => state.isCreating);
+  const transportError = useDocumentStore((state) => state.transportError);
+  const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
+  const loadTemplates = useDocumentStore((state) => state.loadTemplates);
+  const createDocument = useDocumentStore((state) => state.createDocument);
 
-  usePollDocument(document?.id || null);
+  usePollDocument(document?.id ?? null);
 
   useEffect(() => {
     loadDocTypes();
     loadTemplates();
   }, [loadDocTypes, loadTemplates]);
 
-  // Если документ создан и обрабатывается — переходим на страницу документа
   useEffect(() => {
     if (document && document.status === 'processing') {
       navigate(`/documents/${document.id}`);
@@ -44,7 +43,7 @@ export function WizardPage() {
     !isCreating;
 
   const getDisabledReason = (): string | null => {
-    if (isCreating) return 'Создание документа...';
+    if (isCreating) return 'Создание документа…';
     if (isOverLimit) return 'Текст превышает 20000 символов';
     if (trimmedLength === 0) return 'Введите текст документа';
     if (!docType) return 'Выберите тип документа';
@@ -55,59 +54,48 @@ export function WizardPage() {
   const disabledReason = getDisabledReason();
 
   return (
-    <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', marginBottom: '24px' }}>
-        Создание документа
-      </h1>
-
+    <div>
       {transportError && (
         <div
           role="alert"
+          className="mb-4 px-4 py-3 text-sm"
           style={{
-            padding: '12px 16px',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            fontSize: '14px',
+            background: '#fee2e2',
+            border: '1px solid #fca5a5',
+            borderRadius: 'var(--radius)',
+            color: '#7f1d1d',
           }}
         >
           {transportError}
         </div>
       )}
 
+      <SectionHeader
+        step={1}
+        title="Введите черновик"
+        hint="Напишите или вставьте текст — ИИ исправит ошибки и приведёт к деловому стилю"
+      />
       <DraftInput />
-      <DocTypeSelector />
-      <TemplateSelector />
 
-      {/* Кнопка создания */}
-      <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <button
-          type="button"
-          onClick={createDocument}
-          disabled={!canCreate}
-          aria-label={disabledReason || 'Создать документ'}
-          style={{
-            padding: '14px 32px',
-            fontSize: '16px',
-            fontWeight: 600,
-            backgroundColor: canCreate ? '#007bff' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: canCreate ? 'pointer' : 'not-allowed',
-            alignSelf: 'flex-start',
-            transition: 'background-color 0.15s',
-          }}
-        >
-          {isCreating ? 'Создание...' : 'Создать документ'}
-        </button>
+      <div className="mt-10">
+        <SectionHeader
+          step={2}
+          title="Тип документа и шаблон"
+          hint="Тип определяет структуру и реквизиты; шаблон — оформление итогового файла"
+        />
+        <DocTypeSelector />
+        <TemplateSelector />
+      </div>
 
+      <div className="mt-6 flex items-center justify-end gap-4 flex-wrap">
         {disabledReason && !isCreating && (
-          <span style={{ fontSize: '13px', color: '#999' }}>
+          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
             {disabledReason}
           </span>
         )}
+        <PrimaryButton disabled={!canCreate} onClick={createDocument}>
+          {isCreating ? 'Создание…' : 'Создать документ →'}
+        </PrimaryButton>
       </div>
     </div>
   );

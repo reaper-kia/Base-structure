@@ -7,40 +7,73 @@ interface ProcessingScreenProps {
 
 export function ProcessingScreen({ document }: ProcessingScreenProps) {
   return (
-    <section style={{ padding: '24px 0' }}>
-      <h2 style={{ margin: '0 0 8px 0', fontSize: '22px' }}>
-        Обрабатываем документ
-      </h2>
-      <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '14px' }}>
-        Обычно это занимает до минуты. Прогресс обновляется автоматически —
-        вы можете оставаться на странице.
-      </p>
+    <section
+      className="p-6 md:p-8"
+      style={{
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+      }}
+    >
+      <div className="flex flex-col items-center gap-6 py-4">
+        <div className="relative w-16 h-16">
+          <div
+            className="absolute inset-0 rounded-full border-4 border-transparent animate-spin"
+            style={{
+              borderTopColor: 'var(--primary)',
+              borderRightColor: 'var(--accent)',
+            }}
+          />
+          <div
+            className="absolute inset-2 rounded-full border-2 border-transparent animate-spin"
+            style={{
+              borderTopColor: 'var(--accent)',
+              animationDirection: 'reverse',
+              animationDuration: '0.8s',
+            }}
+          />
+        </div>
 
-      <StageStepper currentStage={document.stage} />
+        <div className="text-center">
+          <div
+            className="font-semibold mb-1"
+            style={{ fontFamily: 'var(--font-serif)', color: 'var(--foreground)' }}
+          >
+            ИИ обрабатывает черновик
+          </div>
+          <div className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+            Обычно это занимает до минуты. Прогресс обновляется автоматически.
+          </div>
+        </div>
 
-      <details style={{ marginTop: '32px' }}>
-        <summary
-          style={{ cursor: 'pointer', fontSize: '14px', color: '#007bff' }}
-        >
-          Показать черновик
-        </summary>
-        <pre
-          style={{
-            whiteSpace: 'pre-wrap',
-            overflowWrap: 'anywhere',
-            wordBreak: 'break-word',
-            padding: '12px',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            maxHeight: '300px',
-            overflowY: 'auto',
-            fontSize: '13px',
-            marginTop: '8px',
-          }}
-        >
-          {document.draft}
-        </pre>
-      </details>
+        <div className="w-full max-w-sm">
+          <StageStepper currentStage={document.stage} />
+        </div>
+
+        <details className="w-full max-w-sm">
+          <summary
+            className="cursor-pointer text-xs text-center"
+            style={{ color: 'var(--muted-foreground)' }}
+          >
+            Показать черновик
+          </summary>
+          <pre
+            className="mt-2 p-3 text-left"
+            style={{
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+              background: 'var(--muted)',
+              borderRadius: 'var(--radius)',
+              maxHeight: 300,
+              overflowY: 'auto',
+              fontSize: '0.75rem',
+            }}
+          >
+            {document.draft}
+          </pre>
+        </details>
+      </div>
     </section>
   );
 }

@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import type { DocumentState } from '../../shared/api/types';
 import { useDocumentStore } from '../../shared/store/documentStore';
+import { SectionHeader } from '../../shared/ui/SectionHeader';
 import { DegradedBanner } from './DegradedBanner';
 import { FactGuardBadge } from './FactGuardBadge';
 import { DiffView } from './diff/DiffView';
-import './ResultScreen.css';
 
 interface ResultScreenProps {
   document: DocumentState;
@@ -18,24 +18,12 @@ export function ResultScreen({ document }: ResultScreenProps) {
     document.status === 'processed' || document.status === 'degraded';
 
   return (
-    <section className="result-screen">
-      <div className="result-screen__top">
-        <div>
-          <h2 className="result-screen__title">Документ обработан</h2>
-          <p className="result-muted">
-            Тип: {document.doc_type} · Шаблон: {document.template_id}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="result-download-button"
-          disabled={!canDownload || isRendering}
-          onClick={() => renderDocument(document.id)}
-        >
-          {isRendering ? 'Готовим DOCX...' : 'Скачать DOCX'}
-        </button>
-      </div>
+    <div className="space-y-4">
+      <SectionHeader
+        step={3}
+        title="Документ обработан"
+        hint="Проверьте, что изменил ИИ, и скачайте готовый файл"
+      />
 
       {document.status === 'degraded' && <DegradedBanner />}
 
@@ -47,16 +35,49 @@ export function ResultScreen({ document }: ResultScreenProps) {
         changes={document.changes}
       />
 
-      <section className="result-card result-card--placeholder">
-        <h2 className="result-card__title">Реквизиты</h2>
-        <p className="result-muted">
-          Панель реквизитов будет отдельным блоком на следующем шаге.
+      <section
+        className="p-4"
+        style={{
+          background: 'var(--card)',
+          border: '1px dashed var(--border)',
+          borderRadius: 'var(--radius)',
+        }}
+      >
+        <div
+          className="text-xs font-semibold uppercase tracking-wider mb-1"
+          style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
+        >
+          Реквизиты документа
+        </div>
+        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+          Панель реквизитов появится здесь на следующем шаге (FE-05).
         </p>
       </section>
 
-      <Link className="result-trace-link" to={`/trace/${document.id}`}>
-        Смотреть технический trace
-      </Link>
-    </section>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <Link
+          className="text-xs underline"
+          style={{ color: 'var(--muted-foreground)' }}
+          to={`/trace/${document.id}`}
+        >
+          Смотреть технический trace
+        </Link>
+        <button
+          type="button"
+          disabled={!canDownload || isRendering}
+          onClick={() => renderDocument(document.id)}
+          className="flex items-center gap-2.5 px-8 py-3 font-semibold text-sm transition-all"
+          style={{
+            background: !canDownload || isRendering ? 'var(--muted)' : 'var(--accent)',
+            color: !canDownload || isRendering ? 'var(--muted-foreground)' : '#fff',
+            borderRadius: 'var(--radius)',
+            cursor: !canDownload || isRendering ? 'not-allowed' : 'pointer',
+            letterSpacing: '0.04em',
+          }}
+        >
+          {isRendering ? 'Формируется DOCX…' : '⬇ Скачать DOCX'}
+        </button>
+      </div>
+    </div>
   );
 }

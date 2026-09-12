@@ -36,6 +36,7 @@ describe('DraftInput', () => {
 
     render(<DraftInput />);
 
-    expect(screen.getByText(/Превышен лимит/)).toBeTruthy();
+    // Ищем текст, который содержит "превышен лимит" (часть составной строки)
+    expect(screen.getByText(/превышен лимит/i)).toBeTruthy();
   });
 });

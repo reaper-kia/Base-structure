@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { WizardPage } from '../WizardPage';
 import { useDocumentStore } from '../../../shared/store/documentStore';
 
-// Мокаем хук поллинга, чтобы не запускался таймер в тестах
 vi.mock('../../../shared/hooks/usePollDocument', () => ({
   usePollDocument: () => {},
 }));
@@ -63,26 +62,22 @@ describe('WizardPage', () => {
     useDocumentStore.setState({ draft: 'Текст', templateId: 'classic' });
     renderWizard();
 
-    const button = screen.getByText('Создать документ');
-    expect(button).toBeDisabled();
+    expect(screen.getByText(/Создать документ/)).toBeDisabled();
   });
 
   it('недоступный шаблон нельзя выбрать', () => {
     renderWizard();
 
-    const brokenCard = screen.getByText('Сломанный').closest('[role="button"]');
-    expect(brokenCard).toHaveAttribute('aria-disabled', 'true');
+    const card = screen.getByTestId('template-broken');
+    expect(card).toBeDisabled();
+    expect(card).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('порядок типов совпадает с порядком из API', () => {
     renderWizard();
 
-    const headings = screen.getAllByRole('heading', { level: 3 });
-    const typeNames = headings
-      .map((h) => h.textContent)
-      .filter((name) => name === 'Служебная записка' || name === 'Докладная записка');
-
-    expect(typeNames[0]).toBe('Служебная записка');
-    expect(typeNames[1]).toBe('Докладная записка');
+    const cards = screen.getAllByTestId(/^doc-type-/);
+    expect(cards[0]).toHaveTextContent('Служебная записка');
+    expect(cards[1]).toHaveTextContent('Докладная записка');
   });
 });

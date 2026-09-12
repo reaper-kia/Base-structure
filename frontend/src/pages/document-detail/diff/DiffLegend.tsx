@@ -1,17 +1,30 @@
 const LEGEND_ITEMS = [
-  { type: 'spelling', label: 'Орфография' },
-  { type: 'punctuation', label: 'Пунктуация' },
-  { type: 'style', label: 'Деловой стиль' },
-  { type: 'structure', label: 'Структура' },
+  { type: 'spelling', label: 'Орфография', color: 'var(--diff-spelling)' },
+  { type: 'punctuation', label: 'Пунктуация', color: 'var(--diff-punctuation)' },
+  { type: 'style', label: 'Деловой стиль', color: 'var(--diff-style)' },
+  { type: 'structure', label: 'Структура', color: 'var(--diff-structure)' },
 ] as const;
 
 export function DiffLegend() {
   return (
-    <div className="diff-legend" aria-label="Легенда типов правок">
+    <div
+      className="flex flex-wrap gap-2 mb-3"
+      aria-label="Легенда типов правок"
+    >
       {LEGEND_ITEMS.map((item) => (
-        <span key={item.type} className="diff-legend__item">
+        <span
+          key={item.type}
+          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1"
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            color: 'var(--muted-foreground)',
+          }}
+        >
           <span
-            className={`diff-legend__marker diff-token--${item.type}`}
+            className="w-3 h-3 rounded-sm"
+            style={{ background: item.color }}
             aria-hidden="true"
           />
           {item.label}
