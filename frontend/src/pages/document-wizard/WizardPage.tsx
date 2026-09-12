@@ -60,10 +60,10 @@ export function WizardPage() {
           role="alert"
           className="mb-4 px-4 py-3 text-sm"
           style={{
-            background: '#fee2e2',
-            border: '1px solid #fca5a5',
+            background: 'var(--banner-error-bg)',
+            border: '1px solid var(--banner-error-border)',
             borderRadius: 'var(--radius)',
-            color: '#7f1d1d',
+            color: 'var(--banner-error-text)',
           }}
         >
           {transportError}

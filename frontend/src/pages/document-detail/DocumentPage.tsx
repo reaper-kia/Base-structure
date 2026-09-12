@@ -7,6 +7,8 @@ import { TimeoutScreen } from './TimeoutScreen';
 import { ResultScreen } from './ResultScreen';
 
 export function DocumentPage() {
+  const docTypes = useDocumentStore((state) => state.docTypes);
+  const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
   const { id } = useParams<{ id: string }>();
   const document = useDocumentStore((state) => state.document);
   const pollingTimedOut = useDocumentStore((state) => state.pollingTimedOut);
@@ -23,6 +25,12 @@ export function DocumentPage() {
       fetchDocument(id);
     }
   }, [id, fetchDocument]);
+
+  useEffect(() => {
+    if (docTypes.length === 0) {
+      loadDocTypes();
+    }
+  }, [docTypes.length, loadDocTypes]);
 
   const handleRetry = () => {
     if (id) {
@@ -43,7 +51,8 @@ export function DocumentPage() {
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '28px', marginBottom: '8px' }}>
-        Документ: {document.doc_type}
+        {docTypes.find((type) => type.id === document.doc_type)?.name ??
+          'Документ'}
       </h1>
 
       {showTimeout ? (

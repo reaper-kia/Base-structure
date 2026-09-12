@@ -5,6 +5,7 @@ import { SectionHeader } from '../../shared/ui/SectionHeader';
 import { DegradedBanner } from './DegradedBanner';
 import { FactGuardBadge } from './FactGuardBadge';
 import { DiffView } from './diff/DiffView';
+import { RequisitesPanel } from './RequisitesPanel';
 
 interface ResultScreenProps {
   document: DocumentState;
@@ -12,7 +13,11 @@ interface ResultScreenProps {
 
 export function ResultScreen({ document }: ResultScreenProps) {
   const renderDocument = useDocumentStore((state) => state.renderDocument);
+  const patchRequisites = useDocumentStore((state) => state.patchRequisites);
   const isRendering = useDocumentStore((state) => state.isRendering);
+  const isPatchingRequisites = useDocumentStore(
+    (state) => state.isPatchingRequisites
+  );
 
   const canDownload =
     document.status === 'processed' || document.status === 'degraded';
@@ -22,7 +27,7 @@ export function ResultScreen({ document }: ResultScreenProps) {
       <SectionHeader
         step={3}
         title="Документ обработан"
-        hint="Проверьте, что изменил ИИ, и скачайте готовый файл"
+        hint="Проверьте, что изменил ИИ, уточните реквизиты и скачайте готовый файл"
       />
 
       {document.status === 'degraded' && <DegradedBanner />}
@@ -35,24 +40,11 @@ export function ResultScreen({ document }: ResultScreenProps) {
         changes={document.changes}
       />
 
-      <section
-        className="p-4"
-        style={{
-          background: 'var(--card)',
-          border: '1px dashed var(--border)',
-          borderRadius: 'var(--radius)',
-        }}
-      >
-        <div
-          className="text-xs font-semibold uppercase tracking-wider mb-1"
-          style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
-        >
-          Реквизиты документа
-        </div>
-        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          Панель реквизитов появится здесь на следующем шаге (FE-05).
-        </p>
-      </section>
+      <RequisitesPanel
+        requisites={document.requisites}
+        onPatch={patchRequisites}
+        isPatching={isPatchingRequisites}
+      />
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Link
@@ -68,8 +60,10 @@ export function ResultScreen({ document }: ResultScreenProps) {
           onClick={() => renderDocument(document.id)}
           className="flex items-center gap-2.5 px-8 py-3 font-semibold text-sm transition-all"
           style={{
-            background: !canDownload || isRendering ? 'var(--muted)' : 'var(--accent)',
-            color: !canDownload || isRendering ? 'var(--muted-foreground)' : '#fff',
+            background:
+              !canDownload || isRendering ? 'var(--muted)' : 'var(--accent)',
+            color:
+              !canDownload || isRendering ? 'var(--muted-foreground)' : '#fff',
             borderRadius: 'var(--radius)',
             cursor: !canDownload || isRendering ? 'not-allowed' : 'pointer',
             letterSpacing: '0.04em',

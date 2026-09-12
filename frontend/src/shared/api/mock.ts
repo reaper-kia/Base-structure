@@ -15,7 +15,6 @@ import type {
 // Переключатель сценария мока — одна константа, не три ветки кода
 export const MOCK_SCENARIO: MockScenario = 'all_found';
 
-// Задержка для имитации асинхронности
 const MOCK_DELAY = 1500;
 
 // Скорость обработки: 'fast' для разработки, 'slow' для проверки экрана (~60 сек)
@@ -23,7 +22,6 @@ export const MOCK_SPEED: 'fast' | 'slow' = 'fast';
 const POLLS_PER_STAGE = MOCK_SPEED === 'fast' ? 1 : 20;
 const MOCK_POLL_DELAY = 300;
 
-// Моковые данные для справочников
 const mockDocTypes: DocType[] = [
   {
     id: 'memo',
@@ -99,12 +97,10 @@ const mockTemplates: Template[] = [
   },
 ];
 
-// Хранилище документов в памяти
 const documents = new Map<string, DocumentState>();
 let documentCounter = 0;
 const pollCounts = new Map<string, number>();
 
-// Состояние dev-панели
 let devState: DevState = {
   ai_force_failure: false,
   ml_service_url: 'http://ml_service:8100',
@@ -121,23 +117,139 @@ function generateId(): string {
   return `${Date.now()}-${++documentCounter}`;
 }
 
-// ====== Правила трансформации черновика и генерации DOCX ======
+// ====== Мини-ИИ: извлечение реквизитов из черновика ======
 
-const DOC_TYPE_FILE_NAMES: Record<string, string> = {
-  memo: 'sluzhebnaya-zapiska',
-  report: 'dokladnaya-zapiska',
-  reference: 'informacionnaya-spravka',
-  letter: 'pismo',
+const DOC_TYPE_HEADERS: Record<string, string> = {
+  memo: 'Служебная записка',
+  report: 'Докладная записка',
+  reference: 'Информационная справка',
+  letter: 'Письмо',
 };
 
-function formatDateForFilename(date: Date): string {
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
+const NAME_RE = /^[А-ЯЁ][а-яё]+(\s[А-ЯЁ]\.[А-ЯЁ]\.)+$/;
+const SHORT_NAME_RE = /^[А-ЯЁ][а-яё]+$/;
+const DATE_RE = /^\d{1,2}\.\d{1,2}\.\d{4}$/;
+
+function isName(line: string): boolean {
+  return NAME_RE.test(line) || (SHORT_NAME_RE.test(line) && line.length >= 4);
 }
 
-const STRUCTURE_HEADER = 'Служебная записка\nО предоставлении отпуска';
+function isPosition(line: string): boolean {
+  return (
+    /^[А-ЯЁ]/.test(line) &&
+    !isName(line) &&
+    !DATE_RE.test(line) &&
+    !/^(прошу|довожу|настоящая|уважаемый|основание)/i.test(line) &&
+    line.length <= 60
+  );
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function todayDate(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  return `${dd}.${mm}.${now.getFullYear()}`;
+}
+
+function hasTypeHeader(text: string): boolean {
+  const lines = text.split('\n').map((line) => line.trim().toLowerCase());
+  return lines.some((line) =>
+    Object.values(DOC_TYPE_HEADERS).some(
+      (header) => line === header.toLowerCase()
+    )
+  );
+}
+
+export function extractRequisites(
+  draft: string,
+  docType: string
+): RequisiteState[] {
+  const lines = draft
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  const addresseeLine =
+    lines.find((line) => /^(директору|руководителю|начальнику|адресат)/i.test(line)) ?? null;
+
+  // Подпись в конце: пропускаем дату, берём имя, затем должность перед ним
+  let authorFromSignature: string | null = null;
+  let positionFromSignature: string | null = null;
+  for (let i = lines.length - 1; i >= 0 && i >= lines.length - 4; i -= 1) {
+    if (DATE_RE.test(lines[i])) continue;
+    if (!authorFromSignature && isName(lines[i])) {
+      authorFromSignature = lines[i];
+      continue;
+    }
+    if (authorFromSignature && isPosition(lines[i])) {
+      positionFromSignature = lines[i];
+      break;
+    }
+    if (authorFromSignature) break;
+  }
+
+  // Строка «от …» как запасной источник
+  let authorFromFrom: string | null = null;
+  let positionFromFrom: string | null = null;
+  const fromLine = lines.find((line) => /^от\s/i.test(line));
+  if (fromLine) {
+    const rest = fromLine.replace(/^от\s+/i, '');
+    const match = rest.match(
+      /^(.*?)\s+([А-ЯЁ][а-яё]+(?:\s[А-ЯЁ]\.[А-ЯЁ]\.)+|[А-ЯЁ][а-яё]+)$/
+    );
+    if (match) {
+      positionFromFrom = capitalize(match[1]);
+      authorFromFrom = match[2];
+    } else {
+      authorFromFrom = rest;
+    }
+  }
+
+  const author = authorFromSignature ?? authorFromFrom;
+  const position = positionFromSignature ?? positionFromFrom;
+
+  const subjectLine =
+    lines.find((line) => /^(о|об)\s+[а-яёa-z]/i.test(line)) ?? null;
+  const dateLine = lines.find((line) => DATE_RE.test(line)) ?? null;
+
+  const schema: {
+    key: string;
+    label: string;
+    value: string | null;
+    auto?: boolean;
+  }[] = [
+    { key: 'addressee', label: 'Адресат', value: addresseeLine },
+    { key: 'author', label: 'Автор', value: author },
+    { key: 'position', label: 'Должность автора', value: position },
+    { key: 'subject', label: 'Заголовок к тексту', value: subjectLine },
+    {
+      key: 'doc_date',
+      label: 'Дата документа',
+      value: dateLine ?? todayDate(),
+      auto: !dateLine,
+    },
+  ];
+
+  void docType;
+
+  return schema.map((field) => ({
+    key: field.key,
+    label: field.label,
+    value: field.value,
+    status: (field.auto
+      ? 'auto_filled'
+      : field.value
+        ? 'found_in_draft'
+        : 'missing') as RequisiteStatus,
+    required: true,
+  }));
+}
+
+// ====== Правила улучшения текста ======
 
 const IMPROVEMENT_RULES: {
   change: ChangeItem;
@@ -173,27 +285,47 @@ const IMPROVEMENT_RULES: {
   },
 ];
 
-export function buildImprovedText(draft: string): string {
+export function buildImprovedText(draft: string, docType: string): string {
   let text = draft;
 
   for (const rule of IMPROVEMENT_RULES) {
     text = rule.apply(text);
   }
 
-  if (!/служебная записка/i.test(text)) {
-    text = `${STRUCTURE_HEADER}\n\n${text}`;
+  if (!hasTypeHeader(text)) {
+    const header = DOC_TYPE_HEADERS[docType] ?? DOC_TYPE_HEADERS.memo;
+    const out = text.split('\n');
+    let index = out.findIndex((line) => /^(о|об)\s/i.test(line.trim()));
+    if (index < 0) {
+      index = out.findIndex((line) =>
+        /^(прошу|довожу|настоящая|уважаемый)/i.test(line.trim())
+      );
+    }
+    if (index < 0) {
+      text = `${header}\n\n${text}`;
+    } else {
+      out.splice(index, 0, header, '');
+      text = out.join('\n');
+    }
   }
 
   return text;
 }
 
-export function buildChanges(draft: string, improved: string): ChangeItem[] {
+export function buildChanges(
+  draft: string,
+  improved: string,
+  docType: string
+): ChangeItem[] {
+  void improved;
+
   const changes: ChangeItem[] = IMPROVEMENT_RULES.filter((rule) =>
     draft.toLowerCase().includes(rule.change.from.toLowerCase())
   ).map((rule) => rule.change);
 
-  if (!/служебная записка/i.test(draft) && improved.includes(STRUCTURE_HEADER)) {
-    changes.push({ type: 'structure', from: '', to: STRUCTURE_HEADER });
+  if (!hasTypeHeader(draft)) {
+    const header = DOC_TYPE_HEADERS[docType] ?? DOC_TYPE_HEADERS.memo;
+    changes.push({ type: 'structure', from: '', to: header });
   }
 
   return changes;
@@ -208,12 +340,95 @@ const FACT_ANCHORS = [
   '15 сентября 2025',
 ];
 
+// ====== Рендерер: реквизиты накладываются на документ ======
+
+function placeholderFor(requisite: RequisiteState): string {
+  return `[${requisite.label}]`;
+}
+
+export function buildFinalDocumentText(doc: DocumentState): string {
+  const base = doc.improved_text ?? doc.draft;
+  let lines = base.split('\n');
+
+  const byKey = new Map(doc.requisites.map((req) => [req.key, req]));
+
+  const replaceOrPlace = (
+    predicate: (line: string) => boolean,
+    replacement: string,
+    ifNotFound: 'prepend' | 'append'
+  ) => {
+    const index = lines.findIndex(predicate);
+    if (index >= 0) {
+      lines[index] = replacement;
+      return;
+    }
+    lines =
+      ifNotFound === 'prepend'
+        ? [replacement, '', ...lines]
+        : [...lines, replacement];
+  };
+
+  const addressee = byKey.get('addressee');
+  if (addressee) {
+    replaceOrPlace(
+      (line) => /^(директору|руководителю|начальнику|адресат)/i.test(line.trim()),
+      addressee.value ?? placeholderFor(addressee),
+      'prepend'
+    );
+  }
+
+  const author = byKey.get('author');
+  const position = byKey.get('position');
+  if (author || position) {
+    const parts = [
+      position ? position.value ?? placeholderFor(position) : null,
+      author ? author.value ?? placeholderFor(author) : null,
+    ].filter(Boolean);
+    replaceOrPlace(
+      (line) => /^от\s/i.test(line.trim()),
+      `от ${parts.join(' ')}`,
+      'prepend'
+    );
+  }
+
+  const subject = byKey.get('subject');
+  if (subject) {
+    replaceOrPlace(
+      (line) => /^(о|об)\s/i.test(line.trim()),
+      subject.value ?? placeholderFor(subject),
+      'append'
+    );
+  }
+
+  const docDate = byKey.get('doc_date');
+  if (docDate) {
+    replaceOrPlace(
+      (line) => /^\s*\d{1,2}\.\d{1,2}\.\d{4}\s*$/.test(line),
+      docDate.value ?? placeholderFor(docDate),
+      'append'
+    );
+  }
+
+  return lines.join('\n');
+}
+
+function lineToRuns(line: string): TextRun[] {
+  return line
+    .split(/(\[[^\]]+\])/g)
+    .filter((part) => part.length > 0)
+    .map((part) =>
+      part.startsWith('[') && part.endsWith(']')
+        ? new TextRun({ text: part, highlight: 'yellow' })
+        : new TextRun({ text: part })
+    );
+}
+
 async function buildDocxBlob(doc: DocumentState): Promise<Blob> {
-  const text = doc.improved_text ?? doc.draft;
+  const text = buildFinalDocumentText(doc);
   const paragraphs = text.split('\n').map(
     (line) =>
       new Paragraph({
-        children: [new TextRun(line)],
+        children: lineToRuns(line),
         spacing: { after: 120 },
       })
   );
@@ -225,7 +440,21 @@ async function buildDocxBlob(doc: DocumentState): Promise<Blob> {
   return Packer.toBlob(docxDocument);
 }
 
-// ====== Финальный статус документа в зависимости от сценария ======
+const DOC_TYPE_FILE_NAMES: Record<string, string> = {
+  memo: 'sluzhebnaya-zapiska',
+  report: 'dokladnaya-zapiska',
+  reference: 'informacionnaya-spravka',
+  letter: 'pismo',
+};
+
+function formatDateForFilename(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+// ====== Финальное состояние документа ======
 
 function getTerminalDocumentState(
   draft: string,
@@ -233,8 +462,9 @@ function getTerminalDocumentState(
   templateId: string,
   id: string
 ): DocumentState {
-  const improvedText = buildImprovedText(draft);
-  const changes = buildChanges(draft, improvedText);
+  const improvedText = buildImprovedText(draft, docType);
+  const changes = buildChanges(draft, improvedText, docType);
+  const requisites = extractRequisites(draft, docType);
 
   const source = FACT_ANCHORS.filter((anchor) => draft.includes(anchor));
   const preserved = source.filter((anchor) => improvedText.includes(anchor));
@@ -248,43 +478,7 @@ function getTerminalDocumentState(
     draft,
     improved_text: improvedText,
     changes,
-    requisites: [
-      {
-        key: 'addressee',
-        label: 'Адресат',
-        value: 'Директору ООО «Ромашка» Петрову П.П.',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'author',
-        label: 'Автор',
-        value: 'Иванов И.И.',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'position',
-        label: 'Должность автора',
-        value: 'Менеджер отдела продаж',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'subject',
-        label: 'Заголовок к тексту',
-        value: 'О предоставлении отпуска',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'doc_date',
-        label: 'Дата документа',
-        value: '11.09.2026',
-        status: 'auto_filled' as RequisiteStatus,
-        required: true,
-      },
-    ],
+    requisites,
     fact_guard: {
       verdict: 'clean',
       preserved,
@@ -490,7 +684,10 @@ export const mockApi = {
     return [
       {
         stage: 'anchors',
-        payload: { date: ['10 июня 2025'], amount: ['14 календарных дней'] },
+        payload: {
+          date: ['10 июня 2025'],
+          amount: ['14 календарных дней'],
+        },
       },
       {
         stage: 'llm_request',
@@ -513,10 +710,12 @@ export const mockApi = {
       {
         stage: 'validation',
         payload: {
-          missing: doc.requisites.filter((r) => r.status === 'missing').map((r) => r.key),
+          missing: doc.requisites
+            .filter((req) => req.status === 'missing')
+            .map((req) => req.key),
           auto_filled: doc.requisites
-            .filter((r) => r.status === 'auto_filled')
-            .map((r) => r.key),
+            .filter((req) => req.status === 'auto_filled')
+            .map((req) => req.key),
         },
       },
       {

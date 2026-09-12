@@ -9,7 +9,10 @@ export function TimeoutScreen({ onRetry }: TimeoutScreenProps) {
     <section className="flex flex-col items-center justify-center py-16 text-center gap-6">
       <div
         className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
-        style={{ background: '#fee2e2', border: '2px solid #fca5a5' }}
+          style={{
+          background: 'var(--banner-error-bg)',
+          border: '2px solid var(--banner-error-border)',
+        }}
       >
         ⏱
       </div>

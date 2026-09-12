@@ -3,11 +3,13 @@ import type { ChangeItem, ChangeType } from '../../../shared/api/types';
 
 export type DiffSegmentKind = 'equal' | 'insert' | 'delete';
 
+export type SegmentChangeType = ChangeType | 'neutral';
+
 export interface DiffSegment {
   id: string;
   kind: DiffSegmentKind;
   text: string;
-  changeType?: ChangeType;
+  changeType?: SegmentChangeType;
   before?: string;
   after?: string;
 }
@@ -25,7 +27,7 @@ function classifyChange(
   before: string,
   after: string,
   changes: ChangeItem[]
-): ChangeType {
+): SegmentChangeType {
   const normalizedBefore = normalize(before);
   const normalizedAfter = normalize(after);
 
@@ -54,7 +56,7 @@ function classifyChange(
     return fromMatches && toMatches;
   });
 
-  return partial?.type ?? 'style';
+  return partial?.type ?? 'neutral';
 }
 
 function makeEqualSegment(id: number, text: string): DiffSegment {
@@ -68,7 +70,7 @@ function makeEqualSegment(id: number, text: string): DiffSegment {
 function makeDeleteSegment(
   id: number,
   text: string,
-  changeType: ChangeType,
+  changeType: SegmentChangeType,
   after: string
 ): DiffSegment {
   return {
@@ -84,7 +86,7 @@ function makeDeleteSegment(
 function makeInsertSegment(
   id: number,
   text: string,
-  changeType: ChangeType,
+  changeType: SegmentChangeType,
   before: string
 ): DiffSegment {
   return {

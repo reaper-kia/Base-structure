@@ -3,6 +3,7 @@ const LEGEND_ITEMS = [
   { type: 'punctuation', label: 'Пунктуация', color: 'var(--diff-punctuation)' },
   { type: 'style', label: 'Деловой стиль', color: 'var(--diff-style)' },
   { type: 'structure', label: 'Структура', color: 'var(--diff-structure)' },
+  { type: 'neutral', label: 'Неподтверждённое изменение', color: 'var(--diff-neutral)' },
 ] as const;
 
 export function DiffLegend() {

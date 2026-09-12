@@ -51,6 +51,32 @@
   --diff-punctuation: #eadcff;
   --diff-style: #dbeafe;
   --diff-structure: #dcfce7;
+  --diff-neutral: #e6e9f0;
+  --chip-found-bg: #f0fdf4;
+  --chip-found-border: #22c55e;
+  --chip-found-text: #15803d;
+  --chip-user-bg: #eff6ff;
+  --chip-user-border: #0b4fca;
+  --chip-user-text: #0b4fca;
+  --chip-auto-bg: #eef2fb;
+  --chip-auto-border: #d3daf0;
+  --chip-auto-text: #5e6a8a;
+  --chip-missing-bg: #fef3c7;
+  --chip-missing-border: #f59e0b;
+  --chip-missing-text: #92400e;
+  --chip-blank-bg: #eef2fb;
+  --chip-blank-border: #d3daf0;
+  --chip-blank-text: #5e6a8a;
+  --chip-value-bg: rgba(255, 255, 255, 0.6);
+  --banner-info-bg: #e0f2fe;
+  --banner-info-border: #7dd3fc;
+  --banner-info-text: #075985;
+  --banner-warn-bg: #fef3c7;
+  --banner-warn-border: #fde68a;
+  --banner-warn-text: #92400e;
+  --banner-error-bg: #fee2e2;
+  --banner-error-border: #fca5a5;
+  --banner-error-text: #7f1d1d;
 }
 
 :root[data-theme="dark"] {
@@ -513,4 +539,51 @@ body {
   font-family: var(--font-sans);
   background-color: var(--background);
   color: var(--foreground);
+}
+
+:root[data-theme='dark'] {
+  --background: #10131c;
+  --foreground: #e8ecf6;
+  --card: #171b26;
+  --card-foreground: #e8ecf6;
+  --primary: #4d8dff;
+  --primary-foreground: #ffffff;
+  --secondary: #232a3a;
+  --secondary-foreground: #e8ecf6;
+  --muted: #1d2330;
+  --muted-foreground: #93a0bd;
+  --accent: #0dc268;
+  --accent-foreground: #ffffff;
+  --border: #2a3244;
+  --ring: #4d8dff;
+  --diff-spelling: #5b3a1e;
+  --diff-punctuation: #46305c;
+  --diff-style: #24406b;
+  --diff-structure: #1d4a32;
+  --diff-neutral: #2e3542;
+  --chip-found-bg: #12291c;
+  --chip-found-border: #22c55e;
+  --chip-found-text: #7ee2a8;
+  --chip-user-bg: #14243d;
+  --chip-user-border: #4d8dff;
+  --chip-user-text: #9cc0ff;
+  --chip-auto-bg: #1d2330;
+  --chip-auto-border: #2a3244;
+  --chip-auto-text: #93a0bd;
+  --chip-missing-bg: #33270f;
+  --chip-missing-border: #f59e0b;
+  --chip-missing-text: #fcd34d;
+  --chip-blank-bg: #1d2330;
+  --chip-blank-border: #2a3244;
+  --chip-blank-text: #93a0bd;
+  --chip-value-bg: rgba(255, 255, 255, 0.06);
+  --banner-info-bg: #0c2733;
+  --banner-info-border: #7dd3fc;
+  --banner-info-text: #bae6fd;
+  --banner-warn-bg: #33270f;
+  --banner-warn-border: #fde68a;
+  --banner-warn-text: #fde68a;
+  --banner-error-bg: #331214;
+  --banner-error-border: #fca5a5;
+  --banner-error-text: #fecaca;
 }
