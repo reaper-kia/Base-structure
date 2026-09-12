@@ -34,18 +34,24 @@ export function DevPanel() {
           borderRadius: 'var(--radius)',
         }}
       >
-        <label className="flex items-center gap-3 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            data-testid="break-ai-toggle"
-            checked={devState?.ai_force_failure ?? false}
-            onChange={(event) => setAiForceFailure(event.target.checked)}
-            className="w-4 h-4"
-          />
-          <span className="text-sm" style={{ color: 'var(--foreground)' }}>
-            Имитировать отказ ИИ
-          </span>
-        </label>
+        <div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              data-testid="break-ai-toggle"
+              checked={devState?.ai_force_failure ?? false}
+              onChange={(event) => setAiForceFailure(event.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+              Имитировать отказ ИИ
+            </span>
+          </label>
+          <p className="mt-2 text-xs ml-7" style={{ color: 'var(--muted-foreground)' }}>
+            Демонстрационный режим. Имитирует недоступность ИИ-компонента,
+            чтобы убедиться, что черновик сохраняется при ошибке.
+          </p>
+        </div>
 
         <label className="flex items-center gap-3 cursor-pointer select-none">
           <input
