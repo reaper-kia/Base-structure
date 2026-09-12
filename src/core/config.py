@@ -45,6 +45,7 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
     admin_token: str = ""
+    uploaded_templates_dir: str = "src/modules/templates/assets"
 
 
 settings = Settings()  # type: ignore[call-arg]

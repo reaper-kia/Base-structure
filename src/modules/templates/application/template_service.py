@@ -19,14 +19,13 @@ from src.modules.templates.domain.value_objects import TemplateRules
 logger = logging.getLogger(__name__)
 
 DEFAULT_ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
-DOC_TYPES_DIR = (
-    Path(__file__).resolve().parents[2] / "documents" / "config" / "doc_types"
-)
+DOC_TYPES_DIR = Path(__file__).resolve().parents[2] / "documents" / "config" / "doc_types"
 DEFAULT_TEMPLATE_ID = "classic"
 REQUIRED_DOCX_PARTS = ("[Content_Types].xml", "word/document.xml")
 
 
 def required_requisite_keys() -> set[str]:
+    """Объединение обязательных реквизитов всех типов документов (канон TL-10)."""
     keys: set[str] = set()
     if not DOC_TYPES_DIR.exists():
         return keys
@@ -41,6 +40,7 @@ def required_requisite_keys() -> set[str]:
 
 
 def layout_keys(rules: dict) -> set[str]:
+    """Все ключи, которым нашлось место в раскладке (включая value_key таблиц)."""
     keys: set[str] = set()
     for block in rules.get("requisites_layout", []):
         if "key" in block:
@@ -52,8 +52,21 @@ def layout_keys(rules: dict) -> set[str]:
     return keys
 
 
+def all_spec_keys() -> set[str]:
+    """Все ключи из схем типов документов, включая необязательные."""
+    keys: set[str] = set()
+    if not DOC_TYPES_DIR.exists():
+        return keys
+    for path in sorted(DOC_TYPES_DIR.glob("*.yaml")):
+        spec = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        for req in spec.get("requisites", []):
+            if isinstance(req, dict) and "key" in req:
+                keys.add(req["key"])
+    return keys
+
+
 def build_description(rules: dict) -> str:
-    """Честное описание шаблона: только факты, прочитанные из правил."""
+    """Честное описание шаблона: только факты, прочитанные из правил (B2-08)."""
     font = rules["font"]
     page = rules["page"]
     spacing = rules.get("spacing", {})
@@ -88,6 +101,7 @@ def build_description(rules: dict) -> str:
 
 
 def _docx_is_usable(path: Path) -> bool:
+    """Пригодность DOCX-пакета: zip открывается, CRC целые, нужные части на месте."""
     try:
         with zipfile.ZipFile(path) as z:
             if z.testzip() is not None:
@@ -97,50 +111,52 @@ def _docx_is_usable(path: Path) -> bool:
                 return False
         Document(path)  # финальная проба: python-docx реально открывает файл
         return True
-    except Exception as exc:  # noqa: BLE001 - проба пригодности: список исключений
+    except Exception as exc:  # noqa: BLE001
+        # Осознанно широкий catch: это проба пригодности, а список исключений
+        # повреждённого OOXML открыт (BadZipFile, PackageNotFoundError,
+        # XMLSyntaxError, KeyError, ...).
         logger.debug("DOCX %s не прошёл пробу пригодности: %s", path, exc)
         return False
 
 
-def all_spec_keys() -> set[str]:
-    keys: set[str] = set()
-    if not DOC_TYPES_DIR.exists():
-        return keys
-    for path in sorted(DOC_TYPES_DIR.glob("*.yaml")):
-        spec = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        for req in spec.get("requisites", []):
-            if isinstance(req, dict) and "key" in req:
-                keys.add(req["key"])
-    return keys
-
-
 class TemplateLoader:
-    def __init__(self, assets_dir: Path | str = DEFAULT_ASSETS_DIR) -> None:
+    def __init__(
+        self,
+        assets_dir: Path | str = DEFAULT_ASSETS_DIR,
+        uploaded_dir: Path | str | None = None,
+    ) -> None:
         self._assets_dir = Path(assets_dir)
+        self._uploaded_dir = Path(uploaded_dir) if uploaded_dir else None
 
     def list_templates(self) -> list[Template]:
-        templates: list[Template] = []
+        """Сканирует вшитый assets/ и каталог загрузок (B2-14).
 
-        if not self._assets_dir.exists():
-            return templates
+        Дедуп по id (политика задокументирована): загруженный шаблон с тем же
+        id ПЕРЕОПРЕДЕЛЯЕТ встроенный — каталог загрузок сканируется вторым
+        и побеждает.
+        """
+        templates: dict[str, Template] = {}
+        for entry in self._scan(self._assets_dir):
+            templates[entry.name] = self._load_entry(entry)
+        if self._uploaded_dir:
+            for entry in self._scan(self._uploaded_dir):
+                templates[entry.name] = self._load_entry(entry)
+        return [templates[key] for key in sorted(templates)]
 
-        for entry in sorted(self._assets_dir.iterdir()):
-            if not entry.is_dir():
-                continue
-
-            rules_path = entry / "rules.yaml"
-            if not rules_path.exists():
-                continue
-
-            templates.append(self._load_entry(entry))
-
-        return templates
+    @staticmethod
+    def _scan(directory: Path) -> list[Path]:
+        if not directory.exists():
+            return []
+        return [
+            entry
+            for entry in sorted(directory.iterdir())
+            if entry.is_dir() and (entry / "rules.yaml").exists()
+        ]
 
     def load(self, template_id: str) -> Template:
         for template in self.list_templates():
             if template.id == template_id and template.available:
                 return template
-
         raise TemplateNotFoundError
 
     def load_with_fallback(self, template_id: str) -> Template:
@@ -159,7 +175,8 @@ class TemplateLoader:
             fallback,
             fallback_used=True,
             fallback_reason=(
-                f"Шаблон «{template_id}» повреждён, применён «{DEFAULT_TEMPLATE_ID}»"
+                f"Шаблон «{template_id}» повреждён, "
+                f"применён «{DEFAULT_TEMPLATE_ID}»"
             ),
         )
 
@@ -188,9 +205,9 @@ class TemplateLoader:
 
             # Предупреждение о необязательных ключах без места в раскладке:
             # они не роняют загрузку, но молча не доедут до документа (B2-04).
-            lost_optional = (all_spec_keys() - required_requisite_keys()) - layout_keys(
-                raw_rules
-            )
+            lost_optional = (
+                all_spec_keys() - required_requisite_keys()
+            ) - layout_keys(raw_rules)
             if lost_optional:
                 logger.warning(
                     "Шаблон «%s»: необязательные ключи без места в раскладке %s — "
