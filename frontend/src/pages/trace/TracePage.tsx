@@ -3,6 +3,54 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../../shared/api';
 import type { TraceEntry } from '../../shared/api/types';
 
+function formatDuration(payload: Record<string, unknown>): string | null {
+  if (typeof payload.duration_ms === 'number') {
+    const ms = payload.duration_ms;
+    return ms < 1000 ? `${ms} мс` : `${(ms / 1000).toFixed(1)} с`;
+  }
+  if (typeof payload.duration_s === 'number') {
+    return `${payload.duration_s.toFixed(1)} с`;
+  }
+  return null;
+}
+
+function EntryMeta({ payload }: { payload: Record<string, unknown> }) {
+  const chips: string[] = [];
+
+  if (typeof payload.cache_hit === 'boolean') {
+    chips.push(payload.cache_hit ? 'кэш: попадание' : 'кэш: промах');
+  }
+  const duration = formatDuration(payload);
+  if (duration) chips.push(duration);
+  if (typeof payload.model_version === 'string') {
+    chips.push(`модель: ${payload.model_version}`);
+  }
+  if (typeof payload.prompt_version === 'string') {
+    chips.push(`промпт: ${payload.prompt_version}`);
+  }
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {chips.map((chip) => (
+        <span
+          key={chip}
+          className="text-xs px-2 py-0.5"
+          style={{
+            background: 'var(--muted)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            color: 'var(--muted-foreground)',
+          }}
+        >
+          {chip}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function TracePage() {
   const { id } = useParams<{ id: string }>();
   const [entries, setEntries] = useState<TraceEntry[] | null>(null);
@@ -134,18 +182,37 @@ export function TracePage() {
                 </button>
 
                 {isOpen && (
-                  <pre
-                    className="px-4 pb-4 text-xs leading-relaxed overflow-auto"
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      color: 'var(--foreground)',
-                      maxHeight: 400,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    {JSON.stringify(entry.payload, null, 2)}
-                  </pre>
+                  <div className="px-4 pb-4">
+                    <EntryMeta payload={entry.payload} />
+                    {entry.payload.error != null && (
+                      <div
+                        className="mt-2 p-2 text-xs"
+                        style={{
+                          background: 'var(--banner-error-bg)',
+                          border: '1px solid var(--banner-error-border)',
+                          color: 'var(--banner-error-text)',
+                          borderRadius: 'var(--radius)',
+                        }}
+                      >
+                        Ошибка на стадии:{' '}
+                        {typeof entry.payload.error === 'string'
+                          ? entry.payload.error
+                          : JSON.stringify(entry.payload.error)}
+                      </div>
+                    )}
+                    <pre
+                      className="mt-2 text-xs leading-relaxed overflow-auto"
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        color: 'var(--foreground)',
+                        maxHeight: 400,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {JSON.stringify(entry.payload, null, 2)}
+                    </pre>
+                  </div>
                 )}
               </li>
             );

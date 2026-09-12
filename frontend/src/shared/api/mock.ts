@@ -691,12 +691,22 @@ export const mockApi: DocumentApi = {
       throw new Error('Документ не найден');
     }
 
+    const renderPayload: Record<string, unknown> = {
+      template_id: doc.template_id,
+      rules_applied: { font: 'Times New Roman', size_pt: 14 },
+      duration_ms: 340,
+    };
+    if (doc.status === 'failed' && doc.error) {
+      renderPayload.error = doc.error.message;
+    }
+
     return [
       {
         stage: 'anchors',
         payload: {
           date: ['10 июня 2025'],
           amount: ['14 календарных дней'],
+          duration_ms: 12,
         },
       },
       {
@@ -704,6 +714,8 @@ export const mockApi: DocumentApi = {
         payload: {
           prompt: 'Ты — помощник делопроизводителя...',
           doc_type: doc.doc_type,
+          model_version: 'qwen2.5:7b-instruct',
+          prompt_version: 'v3',
         },
       },
       {
@@ -711,11 +723,16 @@ export const mockApi: DocumentApi = {
         payload: {
           improved_text: doc.improved_text,
           requisites: doc.requisites,
+          duration_ms: 42100,
+          cache_hit: false,
         },
       },
       {
         stage: 'fact_guard',
-        payload: doc.fact_guard || { verdict: 'clean', added: [], lost: [] },
+        payload: {
+          ...(doc.fact_guard || { verdict: 'clean', added: [], lost: [] }),
+          duration_ms: 85,
+        },
       },
       {
         stage: 'validation',
@@ -726,14 +743,12 @@ export const mockApi: DocumentApi = {
           auto_filled: doc.requisites
             .filter((req) => req.status === 'auto_filled')
             .map((req) => req.key),
+          duration_ms: 40,
         },
       },
       {
         stage: 'render',
-        payload: {
-          template_id: doc.template_id,
-          rules_applied: { font: 'Times New Roman', size_pt: 14 },
-        },
+        payload: renderPayload,
       },
     ];
   },
