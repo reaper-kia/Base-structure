@@ -1,9 +1,18 @@
 from __future__ import annotations
-
+from typing import Annotated
 from fastapi import APIRouter
 
 from src.modules.templates.application.template_service import TemplateLoader
 from src.modules.templates.api.schemas import TemplateItem, TemplateListResponse
+
+import re
+import yaml
+from fastapi import File, HTTPException, UploadFile
+from src.modules.templates.application.template_service import DEFAULT_ASSETS_DIR
+from src.modules.templates.infra.docx_parser import NotADocxError, parse_docx_template
+
+ASSETS_DIR = DEFAULT_ASSETS_DIR  # подменяется в тестах
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # п. 7.4: больше 10 МБ → 413
 
 router = APIRouter()
 
@@ -31,23 +40,14 @@ async def list_templates() -> TemplateListResponse:
 
     return TemplateListResponse(templates=items)
 
-
-import re
-import yaml
-from fastapi import File, HTTPException, UploadFile
-from src.modules.templates.application.template_service import DEFAULT_ASSETS_DIR
-from src.modules.templates.infra.docx_parser import NotADocxError, parse_docx_template
-
-ASSETS_DIR = DEFAULT_ASSETS_DIR  # подменяется в тестах
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # п. 7.4: больше 10 МБ → 413
-
-
 @router.post(
     "/api/templates/upload",
     status_code=201,
     summary="Загрузка и автопарсинг DOCX-шаблона",
 )
-async def upload_template(file: UploadFile = File(...)):
+async def upload_template(
+    file: Annotated[UploadFile, File(...)]
+):
     data = await file.read()
 
     if len(data) > MAX_UPLOAD_BYTES:
@@ -56,7 +56,7 @@ async def upload_template(file: UploadFile = File(...)):
     try:
         rules, warnings = parse_docx_template(data)
     except NotADocxError:
-        raise HTTPException(status_code=422, detail="Файл не является корректным DOCX")
+        raise HTTPException(status_code=422, detail="Файл не является корректным DOCX") from None
 
     base = (
         re.sub(r"[^a-z0-9]+", "-", (file.filename or "template").lower()).strip("-")

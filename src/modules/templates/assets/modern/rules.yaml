@@ -1,5 +1,5 @@
 name: "Современный регламентный"
-description: "Лаконичное оформление с табличной шапкой, подходит для регламентов, справок и писем"
+description: "Лаконичное оформление: Arial 12, поля 25/20/15/15 мм, интервал 1.15, таблица-шапка «Кому / От кого»"
 
 page:
   top_mm: 15
@@ -22,7 +22,7 @@ header_footer:
   header:
     text: ""
   footer:
-    text: "{subject} | {date}"
+    text: "{subject} | {doc_date}"
     font_family: "Arial"
     font_size_pt: 10
 
@@ -32,8 +32,13 @@ requisites_layout:
     type: table
     position: top_left
     rows:
-      - {label: "Кому:", value_key: "addressee"}
-      - {label: "От кого:", value_key: "author"}
+      - {label: "Кому:", value_key: addressee}
+      - {label: "От кого:", value_key: author}
+  - {key: doc_date, position: top_left}
+  - {key: reg_number, position: top_left}
+  - {key: salutation, position: left}
   - {key: body, position: body}
-  - {key: author_position, position: bottom_center}
+  - {key: position, position: bottom_center}
   - {key: author, position: bottom_center}
+  - {key: signature, position: bottom_center}
+  - {key: executor, position: bottom_center}
