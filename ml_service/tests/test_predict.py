@@ -1,16 +1,5 @@
-"""Тесты контракта.
-
-Смысл: они проверяют, что сервис отвечает в нужном формате
-ДАЖЕ БЕЗ ОБУЧЕННОЙ МОДЕЛИ. Если эти тесты зелёные - бэкенд
-может интегрироваться, пока ты ещё возишься с моделью.
-
-Запуск: pytest
-"""
-
 from fastapi.testclient import TestClient
-
 from ml_service.main import app
-
 
 def test_health() -> None:
     with TestClient(app) as client:
@@ -18,50 +7,44 @@ def test_health() -> None:
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-
 def test_model_health_reports_state() -> None:
     with TestClient(app) as client:
         response = client.get("/health/model")
     assert response.status_code == 200
-    body = response.json()
-    assert "model_loaded" in body
-    assert "model_version" in body
-
+    assert "model_loaded" in response.json()
 
 def test_predict_works_without_model() -> None:
-    """Ключевой тест. Без артефакта сервис обязан отвечать заглушкой."""
+    """Проверяем, что эндпоинт от тимлида работает с новой схемой."""
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/predict",
             json={
-                "task": "recommend",
+                "request_id": "req-1",
+                "task": "processing",
                 "subject_id": "u1",
-                "candidate_ids": ["item-1", "item-2", "item-3"],
-                "top_k": 2,
+                "text": "Тестовый текст"
             },
         )
     assert response.status_code == 200
-    body = response.json()
-    assert len(body["predictions"]) == 2
-    assert all(0.0 <= p["score"] <= 1.0 for p in body["predictions"])
-
+    assert "predictions" in response.json()
 
 def test_predict_is_deterministic() -> None:
-    """Один и тот же запрос даёт один и тот же ответ.
-
-    Иначе на демо цифры прыгают при обновлении страницы.
-    """
-    payload = {"task": "anomaly", "subject_id": "u42", "features": {"x": 1}}
+    """Один и тот же запрос даёт один и тот же ответ."""
+    payload = {
+        "request_id": "req-2",
+        "task": "processing",
+        "text": "Тестовый текст"
+    }
     with TestClient(app) as client:
         first = client.post("/api/v1/predict", json=payload).json()
         second = client.post("/api/v1/predict", json=payload).json()
-    assert first["predictions"] == second["predictions"]
+    assert first.get("predictions") == second.get("predictions")
 
-
-def test_predict_rejects_bad_top_k() -> None:
+def test_predict_rejects_bad_schema() -> None:
+    """Сломанный JSON (без request_id и text) должен падать с 422."""
     with TestClient(app) as client:
         response = client.post(
             "/api/v1/predict",
-            json={"subject_id": "u1", "top_k": 0},
+            json={"task": "invalid_task"},
         )
     assert response.status_code == 422

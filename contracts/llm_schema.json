@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "properties": {
+    "improved_text": { "type": ["string", "null"] },
+    "addressee": { "type": ["string", "null"] },
+    "author": { "type": ["string", "null"] },
+    "position": { "type": ["string", "null"] },
+    "subject": { "type": ["string", "null"] },
+    "doc_date": { "type": ["string", "null"] }
+  },
+  "required": ["improved_text", "addressee", "author", "position", "subject", "doc_date"]
+}

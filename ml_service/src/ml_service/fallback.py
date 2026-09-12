@@ -1,50 +1,24 @@
-"""Заглушка. Работает ВСЕГДА, без обученной модели и без внешних зависимостей.
+from typing import List
+import random
+from ml_service.schemas import PredictRequest, Prediction, TaskType
 
-Смысл: на защите демо не должно падать из-за того, что модель не доучилась
-или артефакт не собрался. Ответ приходит в том же формате, просто
-is_fallback=True, а качество хуже.
+FALLBACK_VERSION = "1.0.0-fallback"
 
-Этот файл трогать не надо. Он твоя страховка.
-"""
-
-import hashlib
-
-from ml_service.schemas import Prediction, PredictRequest, TaskType
-
-FALLBACK_VERSION = "fallback-1.0.0"
-
-
-def _stable_score(*parts: str) -> float:
-    """Детерминированный псевдослучайный скор в диапазоне 0..1.
-
-    Детерминированный - это важно: при повторном запросе с теми же данными
-    ответ не меняется. Иначе на демо цифры прыгают и это выглядит как баг.
-    """
-    digest = hashlib.sha256("|".join(parts).encode()).digest()
-    return int.from_bytes(digest[:4], "big") / 0xFFFFFFFF
-
-
-def predict_fallback(request: PredictRequest) -> list[Prediction]:
-    if request.task is TaskType.RECOMMEND:
-        candidates = request.candidate_ids or [
-            f"item-{index}" for index in range(1, request.top_k + 1)
+def predict_fallback(request: PredictRequest) -> List[Prediction]:
+    """Возвращает заглушку для любого типа задачи, не требуя старых полей."""
+    
+    # Для детерминированного теста используем hash от текста (или request_id) как seed
+    seed = hash(request.text) if request.text else 42
+    random.seed(seed)
+    
+    if request.task == TaskType.processing:
+        return [
+            Prediction(label="processed_item_1", score=round(random.uniform(0.7, 0.99), 2)),
+            Prediction(label="processed_item_2", score=round(random.uniform(0.5, 0.69), 2))
         ]
-        scored = [
-            Prediction(
-                id=candidate,
-                score=round(_stable_score(request.subject_id, candidate), 4),
-                reason="Базовая выдача по популярности",
-            )
-            for candidate in candidates
-        ]
-        scored.sort(key=lambda prediction: prediction.score, reverse=True)
-        return scored[: request.top_k]
-
-    # anomaly и score: одна оценка на сам subject
+        
+    # Базовый ответ для любых других задач
     return [
-        Prediction(
-            id=request.subject_id,
-            score=round(_stable_score(request.subject_id, request.task.value), 4),
-            reason="Оценка по умолчанию, модель недоступна",
-        )
+        Prediction(label="fallback_1", score=0.9),
+        Prediction(label="fallback_2", score=0.8)
     ]

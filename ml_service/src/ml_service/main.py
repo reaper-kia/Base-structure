@@ -79,7 +79,7 @@ def create_app() -> FastAPI:
             draft=request.draft
         )
 
-        schema_path = Path("../../contracts/llm_schema.json")
+        schema_path = Path("../contracts/llm_schema.json")
         llm_schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
         payload = {
