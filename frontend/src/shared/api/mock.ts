@@ -103,6 +103,7 @@ let documentCounter = 0;
 const pollCounts = new Map<string, number>();
 
 let devState: DevState = {
+  eta_seconds: 45,
   ai_force_failure: false,
   ml_service_url: 'http://ml_service:8100',
   ml_reachable: true,

@@ -19,6 +19,7 @@ export function DocumentPage() {
   const fetchDocument = useDocumentStore((state) => state.fetchDocument);
   const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
   const reprocessDocument = useDocumentStore((state) => state.reprocessDocument);
+  const resumePolling = useDocumentStore((state) => state.resumePolling);
 
   usePollDocument(id || null);
 
@@ -88,7 +89,7 @@ export function DocumentPage() {
       </h1>
 
       {showTimeout ? (
-        <TimeoutScreen onRetry={handleRetry} />
+        <TimeoutScreen onContinue={resumePolling} />
       ) : document.status === 'processing' ? (
         <ProcessingScreen document={document} />
       ) : document.status === 'failed' ? (

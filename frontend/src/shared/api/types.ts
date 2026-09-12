@@ -83,6 +83,7 @@ export interface TraceEntry {
 }
 
 export interface DevState {
+  eta_seconds?: number | null;
   ai_force_failure: boolean;
   ml_service_url: string;
   ml_reachable: boolean;

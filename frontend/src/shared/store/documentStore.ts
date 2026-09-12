@@ -1,37 +1,72 @@
 import { create } from 'zustand';
 import { api } from '../api';
-import { parseContentDisposition } from '../api/contentDisposition';
-import type { DocumentState, DocType, Template, MockScenario, DevState } from '../api/types';
+import type {
+  DocumentState,
+  DocType,
+  Template,
+  MockScenario,
+  DevState,
+} from '../api/types';
+
+const WIZARD_SESSION_KEY = 'doc3-wizard-session';
+
+interface WizardSession {
+  draft: string;
+  docType: string | null;
+  templateId: string | null;
+}
+
+function readWizardSession(): WizardSession {
+  const empty: WizardSession = { draft: '', docType: null, templateId: null };
+  try {
+    const raw = sessionStorage.getItem(WIZARD_SESSION_KEY);
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<WizardSession>;
+    return {
+      draft: typeof parsed.draft === 'string' ? parsed.draft : '',
+      docType: typeof parsed.docType === 'string' ? parsed.docType : null,
+      templateId: typeof parsed.templateId === 'string' ? parsed.templateId : null,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+export function persistWizardSession(state: WizardSession): void {
+  try {
+    sessionStorage.setItem(WIZARD_SESSION_KEY, JSON.stringify(state));
+  } catch {
+    // sessionStorage недоступен (приватный режим) — не критично
+  }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Неизвестная ошибка';
+}
 
 interface WizardState {
-  // Справочники
   docTypes: DocType[];
   templates: Template[];
 
-  // Ввод пользователя - НИКОГДА не перезаписывается ответом сервера
+  // Ввод пользователя: никогда не перезаписывается ответом сервера
   draft: string;
   docType: string | null;
   templateId: string | null;
 
-  // Текущий документ
+  activeDocumentId: string | null;
   document: DocumentState | null;
 
-  // Mock
   mockScenario: MockScenario;
 
-  // UI-состояние
   isCreating: boolean;
   isPatchingRequisites: boolean;
   isRendering: boolean;
+  renderFallback: string | null;
   transportError: string | null;
   pollingTimedOut: boolean;
-  devState: DevState | null;
-  renderFallback: string | null;
-  setPollingTimedOut: (value: boolean) => void;
-  loadDevState: () => Promise<void>;
-  setAiForceFailure: (enabled: boolean) => Promise<void>;
 
-  // Actions
+  devState: DevState | null;
+
   setDraft: (value: string) => void;
   setDocType: (id: string) => void;
   setTemplateId: (id: string) => void;
@@ -42,31 +77,71 @@ interface WizardState {
 
   createDocument: () => Promise<void>;
   fetchDocument: (id: string) => Promise<void>;
+  fetchDocumentSafe: (id: string, signal?: AbortSignal) => Promise<boolean>;
+  resumePolling: () => void;
   patchRequisites: (values: Record<string, string | null>) => Promise<void>;
   reprocessDocument: (id: string) => Promise<void>;
   renderDocument: (id: string) => Promise<void>;
+
+  loadDevState: () => Promise<void>;
+  setAiForceFailure: (enabled: boolean) => Promise<void>;
+  setPollingTimedOut: (value: boolean) => void;
 }
+
+const session = readWizardSession();
 
 export const useDocumentStore = create<WizardState>((set, get) => ({
   docTypes: [],
   templates: [],
-  draft: '',
-  docType: null,
-  templateId: null,
+
+  draft: session.draft,
+  docType: session.docType,
+  templateId: session.templateId,
+
+  activeDocumentId: null,
   document: null,
+
   mockScenario: 'all_found',
+
   isCreating: false,
   isPatchingRequisites: false,
   isRendering: false,
+  renderFallback: null,
   transportError: null,
   pollingTimedOut: false,
-  devState: null,
-  renderFallback: null,
-  setPollingTimedOut: (value) => set({ pollingTimedOut: value }),
 
-  setDraft: (value) => set({ draft: value }),
-  setDocType: (id) => set({ docType: id }),
-  setTemplateId: (id) => set({ templateId: id }),
+  devState: null,
+
+  setDraft: (value) => {
+    set({ draft: value });
+    const s = get();
+    persistWizardSession({
+      draft: s.draft,
+      docType: s.docType,
+      templateId: s.templateId,
+    });
+  },
+
+  setDocType: (id) => {
+    set({ docType: id });
+    const s = get();
+    persistWizardSession({
+      draft: s.draft,
+      docType: s.docType,
+      templateId: s.templateId,
+    });
+  },
+
+  setTemplateId: (id) => {
+    set({ templateId: id });
+    const s = get();
+    persistWizardSession({
+      draft: s.draft,
+      docType: s.docType,
+      templateId: s.templateId,
+    });
+  },
+
   setMockScenario: (scenario) => set({ mockScenario: scenario }),
 
   loadDocTypes: async () => {
@@ -89,9 +164,7 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
 
   createDocument: async () => {
     const { draft, docType, templateId } = get();
-    if (!docType || !templateId || !draft.trim()) {
-      return;
-    }
+    if (!docType || !templateId || !draft.trim()) return;
 
     set({
       isCreating: true,
@@ -105,25 +178,41 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
         doc_type: docType,
         template_id: templateId,
       });
-      set({ document, isCreating: false });
+      set({ document, activeDocumentId: document.id, isCreating: false });
     } catch {
-      set({
-        isCreating: false,
-        transportError: 'Не удалось создать документ',
-      });
+      set({ isCreating: false, transportError: 'Не удалось создать документ' });
     }
   },
 
   fetchDocument: async (id) => {
+    set({ activeDocumentId: id });
     try {
       const document = await api.getDocument(id);
+      if (get().activeDocumentId !== id) return;
       set({ document, transportError: null });
-    } catch {
-      set({ transportError: 'Не удалось получить документ' });
+    } catch (error) {
+      if (get().activeDocumentId !== id) return;
+      set({ transportError: errorMessage(error) });
     }
   },
 
-   patchRequisites: async (values) => {
+  // Ответ по старому id игнорируется: пишем только если это всё ещё
+  // актуальный документ и запрос не отменён
+  fetchDocumentSafe: async (id, signal) => {
+    try {
+      const document = await api.getDocument(id);
+      if (signal?.aborted) return false;
+      if (get().activeDocumentId !== id) return false;
+      set({ document, transportError: null });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  resumePolling: () => set({ pollingTimedOut: false }),
+
+  patchRequisites: async (values) => {
     const { document } = get();
     if (!document) return;
 
@@ -140,7 +229,12 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
   reprocessDocument: async (id) => {
     try {
       const document = await api.reprocessDocument(id);
-      set({ document, transportError: null, pollingTimedOut: false });
+      set({
+        document,
+        activeDocumentId: id,
+        transportError: null,
+        pollingTimedOut: false,
+      });
     } catch {
       set({ transportError: 'Не удалось запустить повторную обработку' });
     }
@@ -150,28 +244,20 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
     set({ isRendering: true, transportError: null });
     try {
       const result = await api.renderDocument(id);
-      const filename =
-        result.filename ?? parseContentDisposition(null, 'document.docx');
-
       set({ renderFallback: result.fallbackReason, isRendering: false });
 
       const url = URL.createObjectURL(result.blob);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
+      link.download = result.filename;
       link.click();
-      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch {
-      set({
-        isRendering: false,
-        transportError: 'Не удалось скачать документ',
-      });
+      set({ isRendering: false, transportError: 'Не удалось скачать документ' });
     }
   },
 
-    loadDevState: async () => {
+  loadDevState: async () => {
     try {
       const devState = await api.getDevState();
       set({ devState, transportError: null });
@@ -188,4 +274,6 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
       set({ transportError: 'Не удалось переключить режим отказа ИИ' });
     }
   },
+
+  setPollingTimedOut: (value) => set({ pollingTimedOut: value }),
 }));

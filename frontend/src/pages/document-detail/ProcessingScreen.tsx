@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import type { DocumentState } from '../../shared/api/types';
+import { useDocumentStore } from '../../shared/store/documentStore';
 import { StageStepper } from './StageStepper';
 
 interface ProcessingScreenProps {
@@ -6,6 +8,17 @@ interface ProcessingScreenProps {
 }
 
 export function ProcessingScreen({ document }: ProcessingScreenProps) {
+  const devState = useDocumentStore((state) => state.devState);
+  const loadDevState = useDocumentStore((state) => state.loadDevState);
+
+  useEffect(() => {
+    if (!devState) {
+      loadDevState();
+    }
+  }, [devState, loadDevState]);
+
+  const etaSeconds = devState?.eta_seconds ?? null;
+
   return (
     <section
       className="p-6 md:p-8"
@@ -46,7 +59,9 @@ export function ProcessingScreen({ document }: ProcessingScreenProps) {
             ИИ обрабатывает черновик
           </div>
           <div className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-            Обычно это занимает до минуты. Прогресс обновляется автоматически.
+            {etaSeconds
+              ? `Обычно это занимает около ${etaSeconds} секунд. Прогресс обновляется автоматически.`
+              : 'Обычно это занимает до минуты. Прогресс обновляется автоматически.'}
           </div>
         </div>
 
