@@ -14,6 +14,16 @@ describe('buildDiff', () => {
     expect(hasDeleted || hasInserted).toBe(true);
   });
 
+  it('помечает неподтверждённую правку как neutral, а не style', () => {
+    const result = buildDiff('foo bar', 'foo baz', []);
+
+    const changed = [...result.left, ...result.right].find(
+      (segment) => segment.kind !== 'equal'
+    );
+
+    expect(changed?.changeType).toBe('neutral');
+  });
+
   it('классифицирует правку по changes[]', () => {
     const result = buildDiff('а то я уже задолбался', '', [
       {

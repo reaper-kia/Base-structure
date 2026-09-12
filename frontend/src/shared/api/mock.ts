@@ -1,4 +1,5 @@
 import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
+import type { DocumentApi } from './contract';
 import type {
   DocumentState,
   DocType,
@@ -15,7 +16,6 @@ import type {
 // Переключатель сценария мока — одна константа, не три ветки кода
 export const MOCK_SCENARIO: MockScenario = 'all_found';
 
-// Задержка для имитации асинхронности
 const MOCK_DELAY = 1500;
 
 // Скорость обработки: 'fast' для разработки, 'slow' для проверки экрана (~60 сек)
@@ -23,7 +23,6 @@ export const MOCK_SPEED: 'fast' | 'slow' = 'fast';
 const POLLS_PER_STAGE = MOCK_SPEED === 'fast' ? 1 : 20;
 const MOCK_POLL_DELAY = 300;
 
-// Моковые данные для справочников
 const mockDocTypes: DocType[] = [
   {
     id: 'memo',
@@ -49,16 +48,16 @@ const mockDocTypes: DocType[] = [
       { key: 'doc_date', label: 'Дата документа', required: true },
     ],
   },
-  {
+   {
     id: 'reference',
     name: 'Информационная справка',
     description: 'Справка о статусе или фактах',
     requisites: [
-      { key: 'addressee', label: 'Адресат', required: true },
       { key: 'author', label: 'Автор', required: true },
-      { key: 'position', label: 'Должность автора', required: true },
-      { key: 'subject', label: 'Заголовок', required: true },
+      { key: 'subject', label: 'Заголовок к тексту', required: true },
       { key: 'doc_date', label: 'Дата документа', required: true },
+      { key: 'signature', label: 'Подпись', required: true },
+      { key: 'addressee', label: 'Адресат', required: false },
     ],
   },
   {
@@ -99,19 +98,19 @@ const mockTemplates: Template[] = [
   },
 ];
 
-// Хранилище документов в памяти
 const documents = new Map<string, DocumentState>();
 let documentCounter = 0;
 const pollCounts = new Map<string, number>();
 
-// Состояние dev-панели
 let devState: DevState = {
+  eta_seconds: 45,
   ai_force_failure: false,
   ml_service_url: 'http://ml_service:8100',
   ml_reachable: true,
   model_version: 'qwen2.5:7b-instruct',
   templates_loaded: ['classic', 'modern'],
 };
+let templateBroken = false;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -121,23 +120,133 @@ function generateId(): string {
   return `${Date.now()}-${++documentCounter}`;
 }
 
-// ====== Правила трансформации черновика и генерации DOCX ======
+// ====== Мини-ИИ: извлечение реквизитов из черновика ======
 
-const DOC_TYPE_FILE_NAMES: Record<string, string> = {
-  memo: 'sluzhebnaya-zapiska',
-  report: 'dokladnaya-zapiska',
-  reference: 'informacionnaya-spravka',
-  letter: 'pismo',
+const DOC_TYPE_HEADERS: Record<string, string> = {
+  memo: 'Служебная записка',
+  report: 'Докладная записка',
+  reference: 'Информационная справка',
+  letter: 'Письмо',
 };
 
-function formatDateForFilename(date: Date): string {
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
+const NAME_RE = /^[А-ЯЁ][а-яё]+(\s[А-ЯЁ]\.[А-ЯЁ]\.)+$/;
+const SHORT_NAME_RE = /^[А-ЯЁ][а-яё]+$/;
+const DATE_RE = /^\d{1,2}\.\d{1,2}\.\d{4}$/;
+
+function isName(line: string): boolean {
+  return NAME_RE.test(line) || (SHORT_NAME_RE.test(line) && line.length >= 4);
 }
 
-const STRUCTURE_HEADER = 'Служебная записка\nО предоставлении отпуска';
+function isPosition(line: string): boolean {
+  return (
+    /^[А-ЯЁ]/.test(line) &&
+    !isName(line) &&
+    !DATE_RE.test(line) &&
+    !/^(прошу|довожу|настоящая|уважаемый|основание)/i.test(line) &&
+    line.length <= 60
+  );
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function todayDate(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  return `${dd}.${mm}.${now.getFullYear()}`;
+}
+
+function hasTypeHeader(text: string): boolean {
+  const lines = text.split('\n').map((line) => line.trim().toLowerCase());
+  return lines.some((line) =>
+    Object.values(DOC_TYPE_HEADERS).some(
+      (header) => line === header.toLowerCase()
+    )
+  );
+}
+
+export function extractRequisites(
+  draft: string,
+  docType: string
+): RequisiteState[] {
+  const lines = draft
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  const addresseeLine =
+    lines.find((line) =>
+      /^(директору|руководителю|начальнику|адресат)/i.test(line)
+    ) ?? null;
+
+  let authorFromSignature: string | null = null;
+  let positionFromSignature: string | null = null;
+  for (let i = lines.length - 1; i >= 0 && i >= lines.length - 4; i -= 1) {
+    if (DATE_RE.test(lines[i])) continue;
+    if (!authorFromSignature && isName(lines[i])) {
+      authorFromSignature = lines[i];
+      continue;
+    }
+    if (authorFromSignature && isPosition(lines[i])) {
+      positionFromSignature = lines[i];
+      break;
+    }
+    if (authorFromSignature) break;
+  }
+
+  let authorFromFrom: string | null = null;
+  let positionFromFrom: string | null = null;
+  const fromLine = lines.find((line) => /^от\s/i.test(line));
+  if (fromLine) {
+    const rest = fromLine.replace(/^от\s+/i, '');
+    const match = rest.match(
+      /^(.*?)\s+([А-ЯЁ][а-яё]+(?:\s[А-ЯЁ]\.[А-ЯЁ]\.)+|[А-ЯЁ][а-яё]+)$/
+    );
+    if (match) {
+      positionFromFrom = capitalize(match[1]);
+      authorFromFrom = match[2];
+    } else {
+      authorFromFrom = rest;
+    }
+  }
+
+  const author = authorFromSignature ?? authorFromFrom;
+  const position = positionFromSignature ?? positionFromFrom;
+  const subjectLine =
+    lines.find((line) => /^(о|об)\s+[а-яёa-z]/i.test(line)) ?? null;
+  const dateLine = lines.find((line) => DATE_RE.test(line)) ?? null;
+
+  const extracted: Record<string, { value: string | null; auto?: boolean }> = {
+    addressee: { value: addresseeLine },
+    author: { value: author },
+    position: { value: position },
+    subject: { value: subjectLine },
+    signature: { value: authorFromSignature },
+    doc_date: { value: dateLine ?? todayDate(), auto: !dateLine },
+  };
+
+  const schema =
+    mockDocTypes.find((type) => type.id === docType)?.requisites ?? [];
+
+  return schema.map((field) => {
+    const entry = extracted[field.key] ?? { value: null };
+    return {
+      key: field.key,
+      label: field.label,
+      value: entry.value,
+      status: (entry.auto
+        ? 'auto_filled'
+        : entry.value
+          ? 'found_in_draft'
+          : 'missing') as RequisiteStatus,
+      required: field.required,
+    };
+  });
+}
+
+// ====== Правила улучшения текста ======
 
 const IMPROVEMENT_RULES: {
   change: ChangeItem;
@@ -173,27 +282,47 @@ const IMPROVEMENT_RULES: {
   },
 ];
 
-export function buildImprovedText(draft: string): string {
+export function buildImprovedText(draft: string, docType: string): string {
   let text = draft;
 
   for (const rule of IMPROVEMENT_RULES) {
     text = rule.apply(text);
   }
 
-  if (!/служебная записка/i.test(text)) {
-    text = `${STRUCTURE_HEADER}\n\n${text}`;
+  if (!hasTypeHeader(text)) {
+    const header = DOC_TYPE_HEADERS[docType] ?? DOC_TYPE_HEADERS.memo;
+    const out = text.split('\n');
+    let index = out.findIndex((line) => /^(о|об)\s/i.test(line.trim()));
+    if (index < 0) {
+      index = out.findIndex((line) =>
+        /^(прошу|довожу|настоящая|уважаемый)/i.test(line.trim())
+      );
+    }
+    if (index < 0) {
+      text = `${header}\n\n${text}`;
+    } else {
+      out.splice(index, 0, header, '');
+      text = out.join('\n');
+    }
   }
 
   return text;
 }
 
-export function buildChanges(draft: string, improved: string): ChangeItem[] {
+export function buildChanges(
+  draft: string,
+  improved: string,
+  docType: string
+): ChangeItem[] {
+  void improved;
+
   const changes: ChangeItem[] = IMPROVEMENT_RULES.filter((rule) =>
     draft.toLowerCase().includes(rule.change.from.toLowerCase())
   ).map((rule) => rule.change);
 
-  if (!/служебная записка/i.test(draft) && improved.includes(STRUCTURE_HEADER)) {
-    changes.push({ type: 'structure', from: '', to: STRUCTURE_HEADER });
+  if (!hasTypeHeader(draft)) {
+    const header = DOC_TYPE_HEADERS[docType] ?? DOC_TYPE_HEADERS.memo;
+    changes.push({ type: 'structure', from: '', to: header });
   }
 
   return changes;
@@ -208,12 +337,95 @@ const FACT_ANCHORS = [
   '15 сентября 2025',
 ];
 
+// ====== Рендерер: реквизиты накладываются на документ ======
+
+function placeholderFor(requisite: RequisiteState): string {
+  return `[${requisite.label}]`;
+}
+
+export function buildFinalDocumentText(doc: DocumentState): string {
+  const base = doc.improved_text ?? doc.draft;
+  let lines = base.split('\n');
+
+  const byKey = new Map(doc.requisites.map((req) => [req.key, req]));
+
+  const replaceOrPlace = (
+    predicate: (line: string) => boolean,
+    replacement: string,
+    ifNotFound: 'prepend' | 'append'
+  ) => {
+    const index = lines.findIndex(predicate);
+    if (index >= 0) {
+      lines[index] = replacement;
+      return;
+    }
+    lines =
+      ifNotFound === 'prepend'
+        ? [replacement, '', ...lines]
+        : [...lines, replacement];
+  };
+
+  const addressee = byKey.get('addressee');
+  if (addressee) {
+    replaceOrPlace(
+      (line) => /^(директору|руководителю|начальнику|адресат)/i.test(line.trim()),
+      addressee.value ?? placeholderFor(addressee),
+      'prepend'
+    );
+  }
+
+  const author = byKey.get('author');
+  const position = byKey.get('position');
+  if (author || position) {
+    const parts = [
+      position ? position.value ?? placeholderFor(position) : null,
+      author ? author.value ?? placeholderFor(author) : null,
+    ].filter(Boolean);
+    replaceOrPlace(
+      (line) => /^от\s/i.test(line.trim()),
+      `от ${parts.join(' ')}`,
+      'prepend'
+    );
+  }
+
+  const subject = byKey.get('subject');
+  if (subject) {
+    replaceOrPlace(
+      (line) => /^(о|об)\s/i.test(line.trim()),
+      subject.value ?? placeholderFor(subject),
+      'append'
+    );
+  }
+
+  const docDate = byKey.get('doc_date');
+  if (docDate) {
+    replaceOrPlace(
+      (line) => /^\s*\d{1,2}\.\d{1,2}\.\d{4}\s*$/.test(line),
+      docDate.value ?? placeholderFor(docDate),
+      'append'
+    );
+  }
+
+  return lines.join('\n');
+}
+
+function lineToRuns(line: string): TextRun[] {
+  return line
+    .split(/(\[[^\]]+\])/g)
+    .filter((part) => part.length > 0)
+    .map((part) =>
+      part.startsWith('[') && part.endsWith(']')
+        ? new TextRun({ text: part, highlight: 'yellow' })
+        : new TextRun({ text: part })
+    );
+}
+
 async function buildDocxBlob(doc: DocumentState): Promise<Blob> {
-  const text = doc.improved_text ?? doc.draft;
+  const text = buildFinalDocumentText(doc);
   const paragraphs = text.split('\n').map(
     (line) =>
       new Paragraph({
-        children: [new TextRun(line)],
+        children: lineToRuns(line),
         spacing: { after: 120 },
       })
   );
@@ -225,7 +437,21 @@ async function buildDocxBlob(doc: DocumentState): Promise<Blob> {
   return Packer.toBlob(docxDocument);
 }
 
-// ====== Финальный статус документа в зависимости от сценария ======
+const DOC_TYPE_FILE_NAMES: Record<string, string> = {
+  memo: 'sluzhebnaya-zapiska',
+  report: 'dokladnaya-zapiska',
+  reference: 'informacionnaya-spravka',
+  letter: 'pismo',
+};
+
+function formatDateForFilename(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+// ====== Финальное состояние документа ======
 
 function getTerminalDocumentState(
   draft: string,
@@ -233,8 +459,9 @@ function getTerminalDocumentState(
   templateId: string,
   id: string
 ): DocumentState {
-  const improvedText = buildImprovedText(draft);
-  const changes = buildChanges(draft, improvedText);
+  const improvedText = buildImprovedText(draft, docType);
+  const changes = buildChanges(draft, improvedText, docType);
+  const requisites = extractRequisites(draft, docType);
 
   const source = FACT_ANCHORS.filter((anchor) => draft.includes(anchor));
   const preserved = source.filter((anchor) => improvedText.includes(anchor));
@@ -248,43 +475,7 @@ function getTerminalDocumentState(
     draft,
     improved_text: improvedText,
     changes,
-    requisites: [
-      {
-        key: 'addressee',
-        label: 'Адресат',
-        value: 'Директору ООО «Ромашка» Петрову П.П.',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'author',
-        label: 'Автор',
-        value: 'Иванов И.И.',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'position',
-        label: 'Должность автора',
-        value: 'Менеджер отдела продаж',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'subject',
-        label: 'Заголовок к тексту',
-        value: 'О предоставлении отпуска',
-        status: 'found_in_draft' as RequisiteStatus,
-        required: true,
-      },
-      {
-        key: 'doc_date',
-        label: 'Дата документа',
-        value: '11.09.2026',
-        status: 'auto_filled' as RequisiteStatus,
-        required: true,
-      },
-    ],
+    requisites,
     fact_guard: {
       verdict: 'clean',
       preserved,
@@ -330,7 +521,7 @@ function getTerminalDocumentState(
 
 // ====== API моки ======
 
-export const mockApi = {
+export const mockApi: DocumentApi = {
   async getDocTypes(): Promise<DocType[]> {
     await delay(MOCK_DELAY);
     return mockDocTypes;
@@ -462,7 +653,12 @@ export const mockApi = {
     return reprocessing;
   },
 
-  async renderDocument(id: string): Promise<{ blob: Blob; filename: string }> {
+  async renderDocument(id: string): Promise<{
+    blob: Blob;
+    filename: string;
+    fallback: boolean;
+    fallbackReason: string | null;
+  }> {  
     await delay(MOCK_DELAY);
     const doc = documents.get(id);
     if (!doc) {
@@ -477,7 +673,16 @@ export const mockApi = {
     const baseName = DOC_TYPE_FILE_NAMES[doc.doc_type] ?? 'document';
     const filename = `${baseName}-${formatDateForFilename(new Date())}.docx`;
 
-    return { blob, filename };
+    const fallback = templateBroken && doc.template_id === 'modern';
+
+    return {
+      blob,
+      filename,
+      fallback,
+      fallbackReason: fallback
+        ? 'Шаблон «modern» повреждён, применён «classic»'
+        : null,
+    };
   },
 
   async getTrace(id: string): Promise<TraceEntry[]> {
@@ -487,16 +692,31 @@ export const mockApi = {
       throw new Error('Документ не найден');
     }
 
+    const renderPayload: Record<string, unknown> = {
+      template_id: doc.template_id,
+      rules_applied: { font: 'Times New Roman', size_pt: 14 },
+      duration_ms: 340,
+    };
+    if (doc.status === 'failed' && doc.error) {
+      renderPayload.error = doc.error.message;
+    }
+
     return [
       {
         stage: 'anchors',
-        payload: { date: ['10 июня 2025'], amount: ['14 календарных дней'] },
+        payload: {
+          date: ['10 июня 2025'],
+          amount: ['14 календарных дней'],
+          duration_ms: 12,
+        },
       },
       {
         stage: 'llm_request',
         payload: {
           prompt: 'Ты — помощник делопроизводителя...',
           doc_type: doc.doc_type,
+          model_version: 'qwen2.5:7b-instruct',
+          prompt_version: 'v3',
         },
       },
       {
@@ -504,27 +724,32 @@ export const mockApi = {
         payload: {
           improved_text: doc.improved_text,
           requisites: doc.requisites,
+          duration_ms: 42100,
+          cache_hit: false,
         },
       },
       {
         stage: 'fact_guard',
-        payload: doc.fact_guard || { verdict: 'clean', added: [], lost: [] },
+        payload: {
+          ...(doc.fact_guard || { verdict: 'clean', added: [], lost: [] }),
+          duration_ms: 85,
+        },
       },
       {
         stage: 'validation',
         payload: {
-          missing: doc.requisites.filter((r) => r.status === 'missing').map((r) => r.key),
+          missing: doc.requisites
+            .filter((req) => req.status === 'missing')
+            .map((req) => req.key),
           auto_filled: doc.requisites
-            .filter((r) => r.status === 'auto_filled')
-            .map((r) => r.key),
+            .filter((req) => req.status === 'auto_filled')
+            .map((req) => req.key),
+          duration_ms: 40,
         },
       },
       {
         stage: 'render',
-        payload: {
-          template_id: doc.template_id,
-          rules_applied: { font: 'Times New Roman', size_pt: 14 },
-        },
+        payload: renderPayload,
       },
     ];
   },
@@ -538,5 +763,16 @@ export const mockApi = {
     await delay(MOCK_DELAY / 2);
     devState = { ...devState, ai_force_failure: enabled };
     return { ...devState };
+  },
+
+    async getTemplateBroken(): Promise<boolean> {
+    await delay(MOCK_DELAY / 2);
+    return templateBroken;
+  },
+
+  async setTemplateBroken(enabled: boolean): Promise<{ template_broken: boolean }> {
+    await delay(MOCK_DELAY / 2);
+    templateBroken = enabled;
+    return { template_broken: enabled };
   },
 };

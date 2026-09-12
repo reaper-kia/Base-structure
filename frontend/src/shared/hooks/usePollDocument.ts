@@ -6,7 +6,10 @@ const MAX_ATTEMPTS = 120;
 
 export function usePollDocument(id: string | null) {
   const status = useDocumentStore((state) => state.document?.status);
-  const fetchDocument = useDocumentStore((state) => state.fetchDocument);
+  const pollingTimedOut = useDocumentStore((state) => state.pollingTimedOut);
+  const fetchDocumentSafe = useDocumentStore(
+    (state) => state.fetchDocumentSafe
+  );
   const setPollingTimedOut = useDocumentStore(
     (state) => state.setPollingTimedOut
   );
@@ -15,25 +18,46 @@ export function usePollDocument(id: string | null) {
   const isProcessing = status === 'processing';
 
   useEffect(() => {
-    if (!id || !isProcessing) {
-      attemptsRef.current = 0;
+    if (!id || !isProcessing || pollingTimedOut) {
+      if (!pollingTimedOut) attemptsRef.current = 0;
       return;
     }
 
-    const interval = setInterval(() => {
-      attemptsRef.current += 1;
+    // Старт заново после «Продолжить ждать» на экране таймаута
+    if (attemptsRef.current >= MAX_ATTEMPTS) attemptsRef.current = 0;
 
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let stopped = false;
+
+    const tick = async () => {
+      if (stopped || controller.signal.aborted) return;
+
+      attemptsRef.current += 1;
       if (attemptsRef.current >= MAX_ATTEMPTS) {
-        clearInterval(interval);
+        // По правилу TL-12 не жмём reprocess вслепую: экран таймаута
+        // сам предлагает только безопасные действия
         setPollingTimedOut(true);
         return;
       }
 
-      fetchDocument(id);
+      await fetchDocumentSafe(id, controller.signal);
+      if (stopped || controller.signal.aborted) return;
+
+      // Следующий запрос планируем ТОЛЬКО после ответа предыдущего
+      timer = setTimeout(() => {
+        void tick();
+      }, POLL_INTERVAL);
+    };
+
+    timer = setTimeout(() => {
+      void tick();
     }, POLL_INTERVAL);
 
     return () => {
-      clearInterval(interval);
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      controller.abort();
     };
-  }, [id, isProcessing, fetchDocument, setPollingTimedOut]);
+  }, [id, isProcessing, pollingTimedOut, fetchDocumentSafe, setPollingTimedOut]);
 }

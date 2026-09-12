@@ -57,7 +57,7 @@ export function PublicLayout() {
       <main id="main-content"><Outlet /></main>
       <footer className="site-footer">
         <div className="container site-footer__bottom">
-          <span>{t('home')}</span>
+          <Link to="/login">{t('admin')}</Link>
         </div>
       </footer>
     </div>

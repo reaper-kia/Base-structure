@@ -1,114 +1,102 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Banner } from '../../shared/ui/Banner';
+import { PrimaryButton } from '../../shared/ui/PrimaryButton';
 import { useDocumentStore } from '../../shared/store/documentStore';
-import { usePollDocument } from '../../shared/hooks/usePollDocument';
 import { DraftInput } from './DraftInput';
 import { DocTypeSelector } from './DocTypeSelector';
 import { TemplateSelector } from './TemplateSelector';
 
 export function WizardPage() {
   const navigate = useNavigate();
-  const {
-    draft,
-    docType,
-    templateId,
-    document,
-    isCreating,
-    transportError,
-    loadDocTypes,
-    loadTemplates,
-    createDocument,
-  } = useDocumentStore();
 
-  usePollDocument(document?.id || null);
+  const [step, setStep] = useState<1 | 2>(1);
+
+  const draft = useDocumentStore((state) => state.draft);
+  const docType = useDocumentStore((state) => state.docType);
+  const templateId = useDocumentStore((state) => state.templateId);
+  const docTypes = useDocumentStore((state) => state.docTypes);
+  const templates = useDocumentStore((state) => state.templates);
+  const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
+  const loadTemplates = useDocumentStore((state) => state.loadTemplates);
+  const createDocument = useDocumentStore((state) => state.createDocument);
+  const isCreating = useDocumentStore((state) => state.isCreating);
+  const transportError = useDocumentStore((state) => state.transportError);
+  const document = useDocumentStore((state) => state.document);
 
   useEffect(() => {
-    loadDocTypes();
-    loadTemplates();
-  }, [loadDocTypes, loadTemplates]);
+    if (docTypes.length === 0) {
+      loadDocTypes();
+    }
+    if (templates.length === 0) {
+      loadTemplates();
+    }
+  }, [docTypes.length, templates.length, loadDocTypes, loadTemplates]);
 
-  // Если документ создан и обрабатывается — переходим на страницу документа
+  // После успешного создания уходим на страницу документа
   useEffect(() => {
-    if (document && document.status === 'processing') {
+    if (document?.id && !isCreating && step === 2) {
       navigate(`/documents/${document.id}`);
     }
-  }, [document, navigate]);
+  }, [document?.id, isCreating, step, navigate]);
 
-  const trimmedLength = draft.trim().length;
-  const isOverLimit = draft.length > 20000;
-  const canCreate =
-    trimmedLength > 0 &&
-    !isOverLimit &&
-    docType !== null &&
-    templateId !== null &&
-    !isCreating;
+  const canCreate = Boolean(
+    draft.trim().length >= 10 && docType && templateId && !isCreating
+  );
 
-  const getDisabledReason = (): string | null => {
-    if (isCreating) return 'Создание документа...';
-    if (isOverLimit) return 'Текст превышает 20000 символов';
-    if (trimmedLength === 0) return 'Введите текст документа';
-    if (!docType) return 'Выберите тип документа';
-    if (!templateId) return 'Выберите шаблон оформления';
-    return null;
+  const handleCreate = async () => {
+    await createDocument();
   };
 
-  const disabledReason = getDisabledReason();
-
   return (
-    <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', marginBottom: '24px' }}>
-        Создание документа
-      </h1>
-
+    <div className="space-y-6">
       {transportError && (
-        <div
-          role="alert"
-          style={{
-            padding: '12px 16px',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            fontSize: '14px',
-          }}
-        >
-          {transportError}
+        <div className="mb-4">
+          <Banner level="error">{transportError}</Banner>
         </div>
       )}
 
-      <DraftInput />
-      <DocTypeSelector />
-      <TemplateSelector />
+      {step === 1 && <DraftInput onNext={() => setStep(2)} />}
 
-      {/* Кнопка создания */}
-      <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <button
-          type="button"
-          onClick={createDocument}
-          disabled={!canCreate}
-          aria-label={disabledReason || 'Создать документ'}
-          style={{
-            padding: '14px 32px',
-            fontSize: '16px',
-            fontWeight: 600,
-            backgroundColor: canCreate ? '#007bff' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: canCreate ? 'pointer' : 'not-allowed',
-            alignSelf: 'flex-start',
-            transition: 'background-color 0.15s',
-          }}
-        >
-          {isCreating ? 'Создание...' : 'Создать документ'}
-        </button>
+      {step === 2 && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="text-sm px-4 py-2.5"
+              style={{ color: 'var(--muted-foreground)' }}
+            >
+              ← Назад к черновику
+            </button>
+          </div>
 
-        {disabledReason && !isCreating && (
-          <span style={{ fontSize: '13px', color: '#999' }}>
-            {disabledReason}
-          </span>
-        )}
-      </div>
+          <DocTypeSelector />
+          <TemplateSelector />
+
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="text-sm"
+              style={{ color: 'var(--muted-foreground)' }}
+            >
+              Изменить черновик
+            </button>
+            <PrimaryButton
+              disabled={!canCreate}
+              onClick={handleCreate}
+              aria-label={
+                !canCreate
+                  ? 'Выберите тип и шаблон документа, чтобы запустить обработку'
+                  : 'Запустить ИИ-обработку и создать документ'
+              }
+            >
+              {isCreating ? 'Создаём документ…' : 'Запустить обработку →'}
+            </PrimaryButton>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { usePollDocument } from '../usePollDocument';
 import { useDocumentStore } from '../../store/documentStore';
 import type { DocumentState } from '../../api/types';
 
-function makeProcessingDocument(): DocumentState {
+function processingDoc(): DocumentState {
   return {
     id: 'test-id',
     status: 'processing',
@@ -23,57 +23,55 @@ function makeProcessingDocument(): DocumentState {
 
 describe('usePollDocument', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     useDocumentStore.setState({
-      document: makeProcessingDocument(),
-      fetchDocument: vi.fn(),
+      document: processingDoc(),
+      pollingTimedOut: false,
+      activeDocumentId: 'test-id',
+      fetchDocumentSafe: vi.fn().mockResolvedValue(true),
       setPollingTimedOut: vi.fn(),
     });
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('не запускает поллинг, если документ не в обработке', () => {
+  it('не опрашивает, если документ не в обработке', async () => {
     useDocumentStore.setState({
-      document: { ...makeProcessingDocument(), status: 'processed' },
+      document: { ...processingDoc(), status: 'processed' },
     });
 
     renderHook(() => usePollDocument('test-id'));
-    vi.advanceTimersByTime(3000);
+    await new Promise((resolve) => setTimeout(resolve, 2200));
 
-    const { fetchDocument } = useDocumentStore.getState();
-    expect(fetchDocument).not.toHaveBeenCalled();
+    expect(useDocumentStore.getState().fetchDocumentSafe).not.toHaveBeenCalled();
   });
 
-  it('показывает ошибку после 120 попыток, а не крутится вечно', () => {
-    renderHook(() => usePollDocument('test-id'));
-
-    vi.advanceTimersByTime(121000);
-
-    const { setPollingTimedOut, fetchDocument } = useDocumentStore.getState();
-    expect(setPollingTimedOut).toHaveBeenCalledWith(true);
-    expect(
-      (fetchDocument as ReturnType<typeof vi.fn>).mock.calls.length
-    ).toBeLessThanOrEqual(120);
-  });
-
-  it('останавливает поллинг при размонтировании', () => {
+  it('останавливает опрос при размонтировании', async () => {
     const { unmount } = renderHook(() => usePollDocument('test-id'));
-
-    vi.advanceTimersByTime(3000);
-    const callsBefore = (
-      useDocumentStore.getState().fetchDocument as ReturnType<typeof vi.fn>
-    ).mock.calls.length;
-
+    await new Promise((resolve) => setTimeout(resolve, 2500));
     unmount();
 
-    vi.advanceTimersByTime(5000);
-    const callsAfter = (
-      useDocumentStore.getState().fetchDocument as ReturnType<typeof vi.fn>
+    const calls = (
+      useDocumentStore.getState().fetchDocumentSafe as ReturnType<typeof vi.fn>
     ).mock.calls.length;
 
-    expect(callsAfter).toBe(callsBefore);
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+
+    expect(
+      (useDocumentStore.getState().fetchDocumentSafe as ReturnType<typeof vi.fn>)
+        .mock.calls.length
+    ).toBe(calls);
+  }, 15000);
+
+  it('сообщает о таймауте после предела попыток', async () => {
+    vi.useFakeTimers();
+
+    renderHook(() => usePollDocument('test-id'));
+    await vi.advanceTimersByTimeAsync(121000);
+
+    expect(useDocumentStore.getState().setPollingTimedOut).toHaveBeenCalledWith(true);
+    expect(
+      (useDocumentStore.getState().fetchDocumentSafe as ReturnType<typeof vi.fn>)
+        .mock.calls.length
+    ).toBeLessThanOrEqual(120);
+
+    vi.useRealTimers();
   });
 });

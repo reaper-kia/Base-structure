@@ -1,21 +1,28 @@
 import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { usePollDocument } from '../../shared/hooks/usePollDocument';
+import { Banner } from '../../shared/ui/Banner';
+import { PrimaryButton } from '../../shared/ui/PrimaryButton';
 import { ProcessingScreen } from './ProcessingScreen';
 import { TimeoutScreen } from './TimeoutScreen';
+import { FailedScreen } from './FailedScreen';
 import { ResultScreen } from './ResultScreen';
 
 export function DocumentPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const document = useDocumentStore((state) => state.document);
   const pollingTimedOut = useDocumentStore((state) => state.pollingTimedOut);
+  const transportError = useDocumentStore((state) => state.transportError);
+  const docTypes = useDocumentStore((state) => state.docTypes);
   const fetchDocument = useDocumentStore((state) => state.fetchDocument);
+  const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
   const reprocessDocument = useDocumentStore((state) => state.reprocessDocument);
+  const resumePolling = useDocumentStore((state) => state.resumePolling);
 
   usePollDocument(id || null);
 
-  // Восстанавливаем состояние по document.id при монтировании или смене id
   useEffect(() => {
     if (!id) return;
     const current = useDocumentStore.getState().document;
@@ -23,6 +30,12 @@ export function DocumentPage() {
       fetchDocument(id);
     }
   }, [id, fetchDocument]);
+
+  useEffect(() => {
+    if (docTypes.length === 0) {
+      loadDocTypes();
+    }
+  }, [docTypes.length, loadDocTypes]);
 
   const handleRetry = () => {
     if (id) {
@@ -32,44 +45,56 @@ export function DocumentPage() {
 
   if (!document) {
     return (
-      <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-        <p>Загрузка документа...</p>
+      <div className="space-y-4">
+        {transportError ? (
+          <>
+            <Banner level="error">{transportError}</Banner>
+            <div className="flex gap-3 flex-wrap">
+              <PrimaryButton onClick={() => navigate('/wizard')}>
+                Создать новый документ
+              </PrimaryButton>
+              <PrimaryButton
+                variant="ghost"
+                onClick={() => id && fetchDocument(id)}
+              >
+                Повторить запрос
+              </PrimaryButton>
+            </div>
+          </>
+        ) : (
+          <p style={{ color: 'var(--muted-foreground)' }}>Загрузка документа…</p>
+        )}
       </div>
     );
   }
 
+  const docTypeName =
+    docTypes.find((type) => type.id === document.doc_type)?.name ?? 'Документ';
+
   const showTimeout = pollingTimedOut && document.status === 'processing';
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', marginBottom: '8px' }}>
-        Документ: {document.doc_type}
+    <div>
+      {transportError && (
+        <div className="mb-4">
+          <Banner level="error">{transportError}</Banner>
+        </div>
+      )}
+
+      <h1
+        className="text-xl font-bold mb-4"
+        style={{ fontFamily: 'var(--font-serif)', color: 'var(--foreground)' }}
+      >
+        {docTypeName}
       </h1>
 
       {showTimeout ? (
-        <TimeoutScreen onRetry={handleRetry} />
+        <TimeoutScreen onContinue={resumePolling} />
       ) : document.status === 'processing' ? (
         <ProcessingScreen document={document} />
       ) : document.status === 'failed' ? (
-        <section style={{ padding: '24px 0' }}>
-          <h2>Не удалось обработать документ</h2>
-          {document.error && <p>{document.error.message}</p>}
-          <button
-            type="button"
-            onClick={handleRetry}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            Повторить
-          </button>
-        </section>
-            ) : (
+        <FailedScreen document={document} onRetry={handleRetry} />
+      ) : (
         <ResultScreen document={document} />
       )}
     </div>

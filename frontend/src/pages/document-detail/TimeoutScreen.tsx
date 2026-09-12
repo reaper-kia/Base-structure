@@ -1,32 +1,38 @@
+import { PrimaryButton } from '../../shared/ui/PrimaryButton';
+
 interface TimeoutScreenProps {
-  onRetry: () => void;
+  onContinue: () => void;
 }
 
-export function TimeoutScreen({ onRetry }: TimeoutScreenProps) {
+export function TimeoutScreen({ onContinue }: TimeoutScreenProps) {
   return (
-    <section style={{ padding: '24px 0', textAlign: 'center' }}>
-      <h2 style={{ fontSize: '22px', marginBottom: '12px' }}>
-        Обработка заняла слишком много времени
-      </h2>
-      <p style={{ color: '#666', marginBottom: '24px' }}>
-        Мы ждали две минуты, но документ ещё не готов. Попробуйте повторить
-        обработку.
-      </p>
-      <button
-        type="button"
-        onClick={onRetry}
+    <section className="flex flex-col items-center gap-6 py-10 text-center">
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
         style={{
-          padding: '12px 24px',
-          fontSize: '16px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer',
+          background: 'var(--banner-warn-bg)',
+          border: '2px solid var(--banner-warn-border)',
+          color: 'var(--banner-warn-text)',
         }}
+        aria-hidden="true"
       >
-        Повторить
-      </button>
+        ⏱
+      </div>
+
+      <div>
+        <h2
+          className="text-lg font-semibold mb-2"
+          style={{ fontFamily: 'var(--font-serif)', color: 'var(--foreground)' }}
+        >
+          Обработка занимает больше времени, чем обычно
+        </h2>
+        <p className="text-sm max-w-md" style={{ color: 'var(--muted-foreground)' }}>
+          Документ всё ещё обрабатывается на сервере — данные не потеряны.
+          Можно продолжить ждать: мы снова начнём опрашивать статус.
+        </p>
+      </div>
+
+      <PrimaryButton onClick={onContinue}>Продолжить ждать</PrimaryButton>
     </section>
   );
 }

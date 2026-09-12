@@ -74,6 +74,7 @@ export interface DocumentState {
   fact_guard: FactGuard | null;
   is_fallback: boolean;
   error: DocumentError | null;
+  reason_code?: 'model_unavailable' | 'schema_invalid' | 'facts_unverified' | null;
 }
 
 export interface TraceEntry {
@@ -82,6 +83,7 @@ export interface TraceEntry {
 }
 
 export interface DevState {
+  eta_seconds?: number | null;
   ai_force_failure: boolean;
   ml_service_url: string;
   ml_reachable: boolean;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ResultScreen } from '../ResultScreen';
+import { useDocumentStore } from '../../../shared/store/documentStore';
 import type { DocumentState } from '../../../shared/api/types';
 
 function makeDocument(status: 'processed' | 'degraded' = 'processed'): DocumentState {
@@ -43,7 +44,7 @@ describe('ResultScreen', () => {
     );
 
     expect(
-      screen.getByText('Обработано в резервном режиме: ИИ-компонент был недоступен.')
+      screen.getByText(/Обработано в резервном режиме/)
     ).toBeInTheDocument();
   });
 
@@ -58,5 +59,39 @@ describe('ResultScreen', () => {
       'href',
       '/trace/doc-1'
     );
+  });
+
+  it('показывает плашку запасного шаблона уровнем информация', () => {
+    act(() => {
+      useDocumentStore.setState({
+        renderFallback: 'Шаблон «modern» повреждён, применён «classic»',
+      });
+    });
+
+    render(
+      <MemoryRouter>
+        <ResultScreen document={makeDocument()} />
+      </MemoryRouter>
+    );
+
+    expect(
+      screen.getByText('Шаблон «modern» повреждён, применён «classic»')
+    ).toBeInTheDocument();
+
+    act(() => {
+      useDocumentStore.setState({ renderFallback: null });
+    });
+  });
+
+    it('кнопка скачивания видна и активна при processed', () => {
+    render(
+      <MemoryRouter>
+        <ResultScreen document={makeDocument('processed')} />
+      </MemoryRouter>
+    );
+
+    const button = screen.getByText('⬇ Скачать DOCX');
+    expect(button).toBeInTheDocument();
+    expect(button).not.toBeDisabled();
   });
 });

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import type { DocumentState } from '../../shared/api/types';
 import { useDocumentStore } from '../../shared/store/documentStore';
+import { SectionHeader } from '../../shared/ui/SectionHeader';
 import { DegradedBanner } from './DegradedBanner';
 import { FactGuardBadge } from './FactGuardBadge';
 import { DiffView } from './diff/DiffView';
-import './ResultScreen.css';
+import { RequisitesPanel } from './RequisitesPanel';
+import { Banner } from '../../shared/ui/Banner';
 
 interface ResultScreenProps {
   document: DocumentState;
@@ -12,32 +14,52 @@ interface ResultScreenProps {
 
 export function ResultScreen({ document }: ResultScreenProps) {
   const renderDocument = useDocumentStore((state) => state.renderDocument);
+  const patchRequisites = useDocumentStore((state) => state.patchRequisites);
   const isRendering = useDocumentStore((state) => state.isRendering);
+  const renderFallback = useDocumentStore((state) => state.renderFallback);
+  const isPatchingRequisites = useDocumentStore(
+    (state) => state.isPatchingRequisites
+  );
 
   const canDownload =
     document.status === 'processed' || document.status === 'degraded';
 
+      const downloadLabel =
+    document.status === 'processing'
+      ? 'Идёт обработка…'
+      : isRendering
+        ? 'Формируется DOCX…'
+        : '⬇ Скачать DOCX';
+
+  const downloadAriaLabel =
+    document.status === 'processing'
+      ? 'Скачивание недоступно: документ ещё обрабатывается'
+      : isRendering
+        ? 'Формируется DOCX-файл, подождите'
+        : 'Скачать готовый документ в формате DOCX';
+
   return (
-    <section className="result-screen">
-      <div className="result-screen__top">
-        <div>
-          <h2 className="result-screen__title">Документ обработан</h2>
-          <p className="result-muted">
-            Тип: {document.doc_type} · Шаблон: {document.template_id}
-          </p>
-        </div>
+    <div className="space-y-4">
+      <SectionHeader
+        step={3}
+        title="Документ обработан"
+        hint="Проверьте, что изменил ИИ, уточните реквизиты и скачайте готовый файл"
+      />
 
-        <button
-          type="button"
-          className="result-download-button"
-          disabled={!canDownload || isRendering}
-          onClick={() => renderDocument(document.id)}
-        >
-          {isRendering ? 'Готовим DOCX...' : 'Скачать DOCX'}
-        </button>
-      </div>
+      {document.status === 'degraded' && (
+        <DegradedBanner reason={document.reason_code ?? null} />
+      )}
 
-      {document.status === 'degraded' && <DegradedBanner />}
+      {renderFallback && <Banner level="info">{renderFallback}</Banner>}
+
+      <FactGuardBadge factGuard={document.fact_guard} />
+
+      {document.fact_guard && document.fact_guard.verdict !== 'clean' && (
+        <Banner level="warning">
+          Fact Guard не подтвердил сохранность всех фактов — проверьте текст
+          глазами.
+        </Banner>
+      )}
 
       <FactGuardBadge factGuard={document.fact_guard} />
 
@@ -47,16 +69,42 @@ export function ResultScreen({ document }: ResultScreenProps) {
         changes={document.changes}
       />
 
-      <section className="result-card result-card--placeholder">
-        <h2 className="result-card__title">Реквизиты</h2>
-        <p className="result-muted">
-          Панель реквизитов будет отдельным блоком на следующем шаге.
-        </p>
-      </section>
+      <RequisitesPanel
+        requisites={document.requisites}
+        onPatch={patchRequisites}
+        isPatching={isPatchingRequisites}
+      />
 
-      <Link className="result-trace-link" to={`/trace/${document.id}`}>
-        Смотреть технический trace
-      </Link>
-    </section>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <Link
+          className="text-xs underline"
+          style={{ color: 'var(--muted-foreground)' }}
+          to={`/trace/${document.id}`}
+        >
+          Смотреть технический trace
+        </Link>
+        {document.status !== 'failed' && (
+          <button
+            type="button"
+            disabled={!canDownload || isRendering}
+            onClick={() => renderDocument(document.id)}
+            aria-label={downloadAriaLabel}
+            aria-busy={isRendering}
+            className="flex items-center gap-2.5 px-8 py-3 font-semibold text-sm transition-all"
+            style={{
+              background:
+                !canDownload || isRendering ? 'var(--muted)' : 'var(--accent)',
+              color:
+                !canDownload || isRendering ? 'var(--muted-foreground)' : '#fff',
+              borderRadius: 'var(--radius)',
+              cursor: !canDownload || isRendering ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {downloadLabel}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

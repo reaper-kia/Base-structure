@@ -12,20 +12,11 @@ interface StageStepperProps {
 
 export function StageStepper({ currentStage }: StageStepperProps) {
   const currentIndex = currentStage
-    ? STAGES.findIndex((s) => s.key === currentStage)
+    ? STAGES.findIndex((stage) => stage.key === currentStage)
     : -1;
 
   return (
-    <ol
-      style={{
-        listStyle: 'none',
-        padding: 0,
-        margin: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-      }}
-    >
+    <ol className="list-none p-0 m-0 flex flex-col gap-3">
       {STAGES.map((stage, index) => {
         const isDone = index < currentIndex;
         const isActive = index === currentIndex;
@@ -37,39 +28,37 @@ export function StageStepper({ currentStage }: StageStepperProps) {
             key={stage.key}
             data-testid={`stage-${stage.key}`}
             data-status={status}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+            className="flex items-center gap-3"
           >
             <span
               aria-hidden="true"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 transition-all"
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                fontWeight: 600,
-                backgroundColor: isDone
-                  ? '#28a745'
+                background: isDone
+                  ? '#22c55e'
                   : isActive
-                    ? '#007bff'
-                    : '#e9ecef',
-                color: isDone || isActive ? 'white' : '#999',
-                flexShrink: 0,
+                    ? 'var(--accent)'
+                    : 'var(--secondary)',
+                color: isPending ? 'var(--muted-foreground)' : '#fff',
               }}
             >
               {isDone ? '✓' : index + 1}
             </span>
             <span
+              className="text-sm font-medium"
               style={{
-                fontSize: '16px',
-                color: isPending ? '#999' : isActive ? '#007bff' : '#212529',
-                fontWeight: isActive ? 600 : 400,
+                color: isPending ? 'var(--muted-foreground)' : 'var(--foreground)',
               }}
             >
               {stage.label}
-              {isActive && <span style={{ marginLeft: '8px' }}>…</span>}
+              {isActive && (
+                <span
+                  className="ml-2 text-xs font-semibold"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  выполняется…
+                </span>
+              )}
             </span>
           </li>
         );

@@ -1,13 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { WizardPage } from '../WizardPage';
 import { useDocumentStore } from '../../../shared/store/documentStore';
-
-// Мокаем хук поллинга, чтобы не запускался таймер в тестах
-vi.mock('../../../shared/hooks/usePollDocument', () => ({
-  usePollDocument: () => {},
-}));
 
 function renderWizard() {
   return render(
@@ -17,6 +12,10 @@ function renderWizard() {
   );
 }
 
+function goToStep2() {
+  fireEvent.click(screen.getByText(/Далее: выбор типа и шаблона/));
+}
+
 describe('WizardPage', () => {
   beforeEach(() => {
     useDocumentStore.setState({
@@ -24,6 +23,8 @@ describe('WizardPage', () => {
       docType: null,
       templateId: null,
       document: null,
+      isCreating: false,
+      transportError: null,
       docTypes: [
         {
           id: 'memo',
@@ -54,35 +55,40 @@ describe('WizardPage', () => {
           available: false,
         },
       ],
-      isCreating: false,
-      transportError: null,
     });
   });
 
-  it('кнопка "Создать" неактивна без типа', () => {
-    useDocumentStore.setState({ draft: 'Текст', templateId: 'classic' });
+  it('кнопка «Далее» неактивна без текста', () => {
     renderWizard();
 
-    const button = screen.getByText('Создать документ');
-    expect(button).toBeDisabled();
+    expect(screen.getByText(/Далее: выбор типа и шаблона/)).toBeDisabled();
+  });
+
+  it('на шаге 2 запуск неактивен без шаблона', () => {
+    useDocumentStore.setState({ draft: 'Текст черновика достаточной длины' });
+    renderWizard();
+    goToStep2();
+
+    expect(screen.getByText(/Запустить обработку/)).toBeDisabled();
   });
 
   it('недоступный шаблон нельзя выбрать', () => {
+    useDocumentStore.setState({ draft: 'Текст черновика достаточной длины' });
     renderWizard();
+    goToStep2();
 
-    const brokenCard = screen.getByText('Сломанный').closest('[role="button"]');
-    expect(brokenCard).toHaveAttribute('aria-disabled', 'true');
+    const card = screen.getByTestId('template-broken');
+    expect(card).toBeDisabled();
+    expect(card).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('порядок типов совпадает с порядком из API', () => {
+    useDocumentStore.setState({ draft: 'Текст черновика достаточной длины' });
     renderWizard();
+    goToStep2();
 
-    const headings = screen.getAllByRole('heading', { level: 3 });
-    const typeNames = headings
-      .map((h) => h.textContent)
-      .filter((name) => name === 'Служебная записка' || name === 'Докладная записка');
-
-    expect(typeNames[0]).toBe('Служебная записка');
-    expect(typeNames[1]).toBe('Докладная записка');
+    const cards = screen.getAllByTestId(/^doc-type-/);
+    expect(cards[0]).toHaveTextContent('Служебная записка');
+    expect(cards[1]).toHaveTextContent('Докладная записка');
   });
 });

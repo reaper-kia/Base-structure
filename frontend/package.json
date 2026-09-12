@@ -12,12 +12,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "diff": "^9.0.0",
     "docx": "^9.7.1",
     "lucide-react": "^0.468.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
+    "tailwindcss": "^4.3.3",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
