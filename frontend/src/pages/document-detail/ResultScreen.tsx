@@ -24,6 +24,20 @@ export function ResultScreen({ document }: ResultScreenProps) {
   const canDownload =
     document.status === 'processed' || document.status === 'degraded';
 
+      const downloadLabel =
+    document.status === 'processing'
+      ? 'Идёт обработка…'
+      : isRendering
+        ? 'Формируется DOCX…'
+        : '⬇ Скачать DOCX';
+
+  const downloadAriaLabel =
+    document.status === 'processing'
+      ? 'Скачивание недоступно: документ ещё обрабатывается'
+      : isRendering
+        ? 'Формируется DOCX-файл, подождите'
+        : 'Скачать готовый документ в формате DOCX';
+
   return (
     <div className="space-y-4">
       <SectionHeader
@@ -69,31 +83,27 @@ export function ResultScreen({ document }: ResultScreenProps) {
         >
           Смотреть технический trace
         </Link>
-        <button
-          type="button"
-          disabled={!canDownload || isRendering}
-          onClick={() => renderDocument(document.id)}
-          aria-label={
-            !canDownload
-              ? 'Скачивание недоступно: документ не обработан'
-              : isRendering
-                ? 'Формируется DOCX-файл, подождите'
-                : 'Скачать готовый документ в формате DOCX'
-          }
-          aria-busy={isRendering}
-          className="flex items-center gap-2.5 px-8 py-3 font-semibold text-sm transition-all"
-          style={{
-            background:
-              !canDownload || isRendering ? 'var(--muted)' : 'var(--accent)',
-            color:
-              !canDownload || isRendering ? 'var(--muted-foreground)' : '#fff',
-            borderRadius: 'var(--radius)',
-            cursor: !canDownload || isRendering ? 'not-allowed' : 'pointer',
-            letterSpacing: '0.04em',
-          }}
-        >
-          {isRendering ? 'Формируется DOCX…' : '⬇ Скачать DOCX'}
-        </button>
+        {document.status !== 'failed' && (
+          <button
+            type="button"
+            disabled={!canDownload || isRendering}
+            onClick={() => renderDocument(document.id)}
+            aria-label={downloadAriaLabel}
+            aria-busy={isRendering}
+            className="flex items-center gap-2.5 px-8 py-3 font-semibold text-sm transition-all"
+            style={{
+              background:
+                !canDownload || isRendering ? 'var(--muted)' : 'var(--accent)',
+              color:
+                !canDownload || isRendering ? 'var(--muted-foreground)' : '#fff',
+              borderRadius: 'var(--radius)',
+              cursor: !canDownload || isRendering ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {downloadLabel}
+          </button>
+        )}
       </div>
     </div>
   );
