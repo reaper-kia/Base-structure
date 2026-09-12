@@ -1,41 +1,44 @@
-"""Извлечение якорных сведений из черновика.
-
-Регулярки дают 80% результата за 20% времени. NER (Natasha) можно
-добавить сверху позже, если останется время.
-"""
-
 import re
+from typing import Dict, List, Any
 
-PATTERNS: dict[str, str] = {
-    "date": r"\b\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}\b"
-            r"|\b\d{1,2}\s+(?:январ|феврал|март|апрел|ма|июн|июл|"
-            r"август|сентябр|октябр|ноябр|декабр)\w*\s*\d{0,4}",
-    "amount": r"\b\d[\d\s]*(?:[.,]\d+)?\s*(?:руб|₽|тыс|млн|%|дней|"
-              r"календарных|рабочих|часов|шт)\b",
-    "fio": r"\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s?[А-ЯЁ]\.|"
-           r"\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+(?:ович|евич|овна|евна|ична)\b",
-    "number": r"№\s?\d+[\w/-]*",
-    "org": r"«[^»]{2,60}»",
-}
+DATE_PATTERN = re.compile(r'\b\d{1,2}[\./-]\d{1,2}[\./-]\d{2,4}\b|\b\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\b', re.IGNORECASE)
+AMOUNT_PATTERN = re.compile(r'\b\d+(?:[\.,\s]\d+)*(?:\s*(?:тыс\.|млн\.|млрд\.|руб\.|долл\.|евро|%|процентов))\b', re.IGNORECASE)
+NAME_PATTERN = re.compile(r'\b[А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s*[А-ЯЁ]\.', re.IGNORECASE)
 
+def get_context_window(text: str, match: re.Match, window_size: int = 7) -> str:
+    """Возвращает окно из N слов вокруг найденного факта для проверки условий."""
+    words = text.split()
+    
+    prefix = text[:match.start()].split()
+    start_idx = max(0, len(prefix) - window_size)
+    
+    match_len_words = len(match.group().split())
+    end_idx = min(len(words), len(prefix) + match_len_words + window_size)
+    
+    return " ".join(words[start_idx:end_idx]).lower()
 
-def normalize(anchor: str) -> str:
-    """
-    Приводит якорь к нормальной форме для честного сравнения.
-    Без этого 'Иванов И.И.' и 'Иванов И. И.' посчитаются разными.
-    """
-    # Переводим в нижний регистр
-    norm = anchor.lower()
-    # Убираем точки (важно для инициалов)
-    norm = norm.replace(".", " ")
-    # Схлопываем любые множественные пробелы в один и обрезаем края
-    norm = re.sub(r"\s+", " ", norm).strip()
-    return norm
-
-
-def extract(text: str) -> dict[str, list[str]]:
-    """Извлекает факты из текста строго по регулярным выражениям."""
-    return {
-        kind: [m.group(0).strip() for m in re.finditer(pattern, text)]
-        for kind, pattern in PATTERNS.items()
-    }
+def extract(text: str) -> Dict[str, List[Dict[str, Any]]]:
+    if not text:
+        return {"dates": [], "amounts": [], "names": []}
+        
+    anchors = {"dates": [], "amounts": [], "names": []}
+    
+    for match in DATE_PATTERN.finditer(text):
+        anchors["dates"].append({
+            "value": match.group(),
+            "context": get_context_window(text, match)
+        })
+        
+    for match in AMOUNT_PATTERN.finditer(text):
+        anchors["amounts"].append({
+            "value": match.group(),
+            "context": get_context_window(text, match)
+        })
+        
+    for match in NAME_PATTERN.finditer(text):
+        anchors["names"].append({
+            "value": match.group(),
+            "context": get_context_window(text, match)
+        })
+        
+    return anchors

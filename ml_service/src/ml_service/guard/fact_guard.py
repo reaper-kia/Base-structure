@@ -1,79 +1,85 @@
-"""Детерминированная защита от галлюцинаций.
-
-Сверяет якоря исходного текста с якорями результата. Промпт просит модель
-не выдумывать, Fact Guard это проверяет.
-"""
-
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
-from ml_service.guard.anchors import normalize
-
 
 @dataclass
 class GuardResult:
-    preserved: list[str] = field(default_factory=list)
-    lost: list[str] = field(default_factory=list)
-    added: list[str] = field(default_factory=list)
-    verdict: str = "clean"  # clean | warning | blocked
+    verdict: str = "clean"
+    preserved: List[str] = field(default_factory=list)
+    lost: List[str] = field(default_factory=list)
+    added: List[str] = field(default_factory=list)
     source_count: int = 0
     preserved_count: int = 0
-
-    def as_dict(self) -> dict:
+    
+    def as_dict(self):
         return {
+            "verdict": self.verdict,
             "preserved": self.preserved,
             "lost": self.lost,
             "added": self.added,
-            "verdict": self.verdict,
             "source_count": self.source_count,
-            "preserved_count": self.preserved_count,
+            "preserved_count": self.preserved_count
         }
 
+INVERSIONS = [
+    ({"после", "позднее", "не ранее"}, {"до", "не позднее", "не позднее чем", "ранее"}),
+    ({"не"}, {"только", "исключительно"}),
+    ({"без"}, {"с", "включительно"})
+]
 
-def check(source_anchors: dict[str, list[str]], result_anchors: dict[str, list[str]]) -> GuardResult:
-    """
-    Сравнивает извлеченные факты до и после обработки нейросетью.
-    """
-    preserved = []
-    lost = []
-    added = []
-    
-    # 1. Собираем все факты из исходного черновика в нормализованном виде
-    source_norm_map = {}
-    for category, anchors in source_anchors.items():
-        for anchor in anchors:
-            source_norm_map[normalize(anchor)] = anchor
-            
-    # 2. Собираем все факты из ответа ИИ
-    result_norm_map = {}
-    for category, anchors in result_anchors.items():
-        for anchor in anchors:
-            result_norm_map[normalize(anchor)] = anchor
-            
-    # 3. Ищем сохраненные и потерянные факты
-    for norm_val, orig_val in source_norm_map.items():
-        if norm_val in result_norm_map:
-            preserved.append(orig_val)
-        else:
-            lost.append(orig_val)
-            
-    # 4. Ищем галлюцинации (добавленные факты)
-    for norm_val, orig_val in result_norm_map.items():
-        if norm_val not in source_norm_map:
-            added.append(orig_val)
-            
-    # 5. Выносим вердикт согласно ТЗ
-    if added:
-        verdict = "blocked"
-    elif lost:
-        verdict = "warning"
-    else:
-        verdict = "clean"
+def check_inversion(src_ctx: str, res_ctx: str) -> bool:
+    """Проверяет, не перевернулся ли смысл."""
+    for group1, group2 in INVERSIONS:
+        has_g1_src = any(w in src_ctx for w in group1)
+        has_g2_src = any(w in src_ctx for w in group2)
+        has_g1_res = any(w in res_ctx for w in group1)
+        has_g2_res = any(w in res_ctx for w in group2)
         
-    # 6. Возвращаем объект GuardResult
+        if (has_g1_src and has_g2_res and not has_g1_res) or (has_g2_src and has_g1_res and not has_g2_res):
+            return True
+    return False
+
+def check(source_anchors: Dict[str, List[Dict[str, Any]]], result_anchors: Dict[str, List[Dict[str, Any]]]) -> GuardResult:
+    lost = []
+    preserved = []
+    added = []
+    blocked = False
+    
+    for category in ["dates", "amounts", "names"]:
+        src_items = source_anchors.get(category, [])
+        res_items = result_anchors.get(category, [])
+        
+        src_vals = {item["value"] for item in src_items}
+        res_vals = {item["value"] for item in res_items}
+        
+        for item in src_items:
+            if item["value"] not in res_vals:
+                lost.append(item["value"])
+                # Строгий запрет на потерю сумм и дат
+                if category in ["amounts", "dates"]: 
+                    blocked = True
+            else:
+                preserved.append(item["value"])
+                res_item = next(r for r in res_items if r["value"] == item["value"])
+                
+                # Если факт на месте, но условие поменялось
+                if check_inversion(item["context"], res_item["context"]):
+                    blocked = True
+                    
+        for item in res_items:
+            if item["value"] not in src_vals:
+                added.append(item["value"])
+
+    verdict = "clean"
+    if blocked:
+        verdict = "blocked"
+    elif lost or added:
+        verdict = "warning"
+        
     return GuardResult(
+        verdict=verdict,
         preserved=preserved,
         lost=lost,
         added=added,
-        verdict=verdict,
-        source_count=len(source_norm_map),
+        source_count=sum(len(v) for v in source_anchors.values()),
         preserved_count=len(preserved)
     )
