@@ -1,4 +1,4 @@
-.PHONY: up down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert ml-test pull-model models smoke smoke-prod
+.PHONY: up down down-v build restart logs ps shell db-shell test lint format tree migration migrate downgrade cert ml-test docx-samples pull-model models smoke smoke-prod
 
 OLLAMA_MODEL ?= qwen2.5:7b-instruct
 
@@ -71,6 +71,9 @@ cert:
 # Тесты ML-сервиса (у него свои зависимости и свой pytest)
 ml-test:
 	cd ml_service && pytest
+
+docx-samples: ## 8 эталонных DOCX (4 типа x 2 шаблона) в artifacts/ (демо для защиты)
+	docker compose exec app python scripts/make_docx_samples.py
 
 # End-to-end smoke-тест: создать документ → дождаться → скачать DOCX
 smoke:
