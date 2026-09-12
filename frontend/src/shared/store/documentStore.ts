@@ -123,19 +123,17 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
     }
   },
 
-  patchRequisites: async (values) => {
+   patchRequisites: async (values) => {
     const { document } = get();
     if (!document) return;
 
-    set({ isPatchingRequisites: true, transportError: null });
+    set({ isPatchingRequisites: true });
     try {
       const updated = await api.patchRequisites(document.id, values);
       set({ document: updated, isPatchingRequisites: false });
-    } catch {
-      set({
-        isPatchingRequisites: false,
-        transportError: 'Не удалось обновить реквизиты',
-      });
+    } catch (error) {
+      set({ isPatchingRequisites: false });
+      throw error;
     }
   },
 

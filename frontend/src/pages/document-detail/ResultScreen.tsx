@@ -32,9 +32,13 @@ export function ResultScreen({ document }: ResultScreenProps) {
         hint="Проверьте, что изменил ИИ, уточните реквизиты и скачайте готовый файл"
       />
 
-      {document.status === 'degraded' && <DegradedBanner />}
+      {document.status === 'degraded' && (
+        <DegradedBanner reason={document.reason_code ?? null} />
+      )}
 
       {renderFallback && <Banner level="info">{renderFallback}</Banner>}
+
+      <FactGuardBadge factGuard={document.fact_guard} />
 
       {document.fact_guard && document.fact_guard.verdict !== 'clean' && (
         <Banner level="warning">

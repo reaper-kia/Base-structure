@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { RequisiteState } from '../../shared/api/types';
+import { Banner } from '../../shared/ui/Banner';
 import { RequisiteChip } from './RequisiteChip';
 import { RequisiteEditor } from './RequisiteEditor';
 
@@ -15,27 +16,38 @@ export function RequisitesPanel({
   isPatching,
 }: RequisitesPanelProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
-
-  const handleEdit = (key: string) => {
-    setEditingKey(key);
-  };
+  const [patchError, setPatchError] = useState<string | null>(null);
 
   const handleSave = async (key: string, value: string | null) => {
+    setPatchError(null);
     try {
       await onPatch({ [key]: value });
       setEditingKey(null);
-    } catch {
-      // При ошибке PATCH не закрываем редактор — пользователь может
-      // попробовать ещё раз или отменить вручную
+    } catch (error) {
+      setPatchError(
+        error instanceof Error
+          ? error.message
+          : 'Не удалось сохранить реквизиты'
+      );
     }
   };
 
   const handleCancel = () => {
     setEditingKey(null);
+    setPatchError(null);
   };
 
   const handleLeaveBlank = async (key: string) => {
-    await onPatch({ [key]: null });
+    setPatchError(null);
+    try {
+      await onPatch({ [key]: null });
+    } catch (error) {
+      setPatchError(
+        error instanceof Error
+          ? error.message
+          : 'Не удалось сохранить реквизиты'
+      );
+    }
   };
 
   return (
@@ -61,6 +73,15 @@ export function RequisitesPanel({
         </p>
       </div>
 
+      {patchError && (
+        <div className="mb-3">
+          <Banner level="error">
+            {patchError} Значение осталось в поле — попробуйте сохранить ещё
+            раз.
+          </Banner>
+        </div>
+      )}
+
       <div className="space-y-3">
         {requisites.map((req) =>
           editingKey === req.key ? (
@@ -74,7 +95,7 @@ export function RequisitesPanel({
             <RequisiteChip
               key={req.key}
               requisite={req}
-              onEdit={() => handleEdit(req.key)}
+              onEdit={() => setEditingKey(req.key)}
               onLeaveBlank={
                 req.status === 'missing'
                   ? () => handleLeaveBlank(req.key)

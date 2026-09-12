@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { DocumentState } from '../../shared/api/types';
 import { useDocumentStore } from '../../shared/store/documentStore';
@@ -11,12 +12,23 @@ interface FailedScreenProps {
 export function FailedScreen({ document, onRetry }: FailedScreenProps) {
   const navigate = useNavigate();
   const setDraft = useDocumentStore((state) => state.setDraft);
+  const [copied, setCopied] = useState(false);
 
   const recoverable = document.error?.recoverable ?? false;
 
   const handleEditDraft = () => {
     setDraft(document.draft);
     navigate('/wizard');
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(document.draft);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // буфер недоступен — текст всё равно виден и выделяется вручную
+    }
   };
 
   return (
@@ -56,11 +68,21 @@ export function FailedScreen({ document, onRetry }: FailedScreenProps) {
           borderRadius: 'var(--radius)',
         }}
       >
-        <div
-          className="text-xs font-semibold uppercase tracking-wider mb-2"
-          style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
-        >
-          Ваш черновик сохранён целиком
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
+          >
+            Ваш черновик сохранён целиком
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="text-xs underline flex-shrink-0"
+            style={{ color: 'var(--muted-foreground)' }}
+          >
+            {copied ? 'Скопировано ✓' : 'Скопировать черновик'}
+          </button>
         </div>
         <pre
           data-testid="failed-draft"

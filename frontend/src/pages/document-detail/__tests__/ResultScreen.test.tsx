@@ -44,7 +44,7 @@ describe('ResultScreen', () => {
     );
 
     expect(
-      screen.getByText('Обработано в резервном режиме: ИИ-компонент был недоступен.')
+      screen.getByText(/Обработано в резервном режиме/)
     ).toBeInTheDocument();
   });
 

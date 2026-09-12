@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { usePollDocument } from '../../shared/hooks/usePollDocument';
 import { Banner } from '../../shared/ui/Banner';
+import { PrimaryButton } from '../../shared/ui/PrimaryButton';
 import { ProcessingScreen } from './ProcessingScreen';
 import { TimeoutScreen } from './TimeoutScreen';
 import { FailedScreen } from './FailedScreen';
@@ -10,6 +11,7 @@ import { ResultScreen } from './ResultScreen';
 
 export function DocumentPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const document = useDocumentStore((state) => state.document);
   const pollingTimedOut = useDocumentStore((state) => state.pollingTimedOut);
   const transportError = useDocumentStore((state) => state.transportError);
@@ -20,7 +22,6 @@ export function DocumentPage() {
 
   usePollDocument(id || null);
 
-  // Восстанавливаем состояние по document.id при монтировании или смене id
   useEffect(() => {
     if (!id) return;
     const current = useDocumentStore.getState().document;
@@ -43,8 +44,25 @@ export function DocumentPage() {
 
   if (!document) {
     return (
-      <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-        <p>Загрузка документа...</p>
+      <div className="space-y-4">
+        {transportError ? (
+          <>
+            <Banner level="error">{transportError}</Banner>
+            <div className="flex gap-3 flex-wrap">
+              <PrimaryButton onClick={() => navigate('/wizard')}>
+                Создать новый документ
+              </PrimaryButton>
+              <PrimaryButton
+                variant="ghost"
+                onClick={() => id && fetchDocument(id)}
+              >
+                Повторить запрос
+              </PrimaryButton>
+            </div>
+          </>
+        ) : (
+          <p style={{ color: 'var(--muted-foreground)' }}>Загрузка документа…</p>
+        )}
       </div>
     );
   }
