@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     # базы знаний; compose включает его явно.
     rag_enabled: bool = False
     rag_vector_enabled: bool = True
-    rag_embed_model: str = "bge-m3"
+    rag_embed_model: str = "nomic-embed-text"
     rag_embed_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
     rag_embed_keep_alive: str = "0"
     rag_top_k: int = Field(default=3, ge=1, le=10)
