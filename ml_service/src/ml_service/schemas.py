@@ -38,6 +38,13 @@ class ModelHealth(BaseModel):
     supported_tasks: List[str]
 
 
+# ML-10: Формат фрагмента базы знаний
+class KnowledgeChunk(BaseModel):
+    doc_id: str
+    section_title: str
+    text: str
+
+
 class ProcessRequest(BaseModel):
     draft: str
     doc_type: str
@@ -45,6 +52,9 @@ class ProcessRequest(BaseModel):
     structure_hint: str
     requisite_keys: List[str]
     request_id: str
+    # ML-10: Новые поля для RAG-контекста
+    terminology_context: str = ""
+    retrieved_chunks: List[KnowledgeChunk] = []
 
 
 class FactGuardResult(BaseModel):
@@ -62,4 +72,4 @@ class ProcessResponse(BaseModel):
     requisites: Dict[str, Any]
     fact_guard: FactGuardResult
     is_fallback: bool = False
-    reason_code: Optional[str] = None  # ML-04/06: явная причина ошибки
+    reason_code: Optional[str] = None

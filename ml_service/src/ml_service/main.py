@@ -25,19 +25,24 @@ from ml_service.guard import anchors, fact_guard
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     registry.load()
-    load_stt_model()  # Загружаем модель распознавания речи при старте (ML-11)
+    load_stt_model()
     yield
 
-
 def build_strict_schema(keys: list[str]) -> dict:
-    """ML-04: Строит схему только под ожидаемые ключи."""
     props = {"improved_text": {"type": "string"}}
     for k in keys:
         props[k] = {"type": ["string", "null"]}
+        
+    candidate_props = {k: {"type": ["string", "null"]} for k in keys}
+    props["registry_candidates"] = {
+        "type": "object",
+        "properties": candidate_props,
+        "additionalProperties": False
+    }
+    
     return {
         "type": "object",
         "properties": props,
@@ -45,9 +50,7 @@ def build_strict_schema(keys: list[str]) -> dict:
         "additionalProperties": False,
     }
 
-
 def validate_llm_response(data: dict, expected_keys: list[str]) -> bool:
-    """ML-04: Жесткая проверка типов (отсекает массивы и лишние ключи)."""
     if not isinstance(data, dict):
         return False
     if "improved_text" not in data or not isinstance(data["improved_text"], str):
@@ -57,12 +60,21 @@ def validate_llm_response(data: dict, expected_keys: list[str]) -> bool:
             return False
         if data[k] is not None and not isinstance(data[k], str):
             return False
-    # Проверка на лишние ключи (additionalProperties = False)
-    allowed = set(["improved_text"] + expected_keys)
+            
+    if "registry_candidates" in data:
+        cands = data["registry_candidates"]
+        if not isinstance(cands, dict):
+            return False
+        for k in cands:
+            if k not in expected_keys:
+                return False
+            if cands[k] is not None and not isinstance(cands[k], str):
+                return False
+
+    allowed = set(["improved_text", "registry_candidates"] + expected_keys)
     if any(k not in allowed for k in data.keys()):
         return False
     return True
-
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
@@ -85,7 +97,6 @@ def create_app() -> FastAPI:
 
     @app.post("/stt")
     async def stt(audio: UploadFile = File(...)):
-        """ML-11: Эндпоинт для локального распознавания речи"""
         audio_bytes = await audio.read()
         try:
             result = stt_recognize(audio_bytes)
@@ -100,10 +111,18 @@ def create_app() -> FastAPI:
         started = time.perf_counter()
         source_anchors = anchors.extract(request.draft)
 
+        chunks_text = "Корпус пуст."
+        if request.retrieved_chunks:
+            chunks_text = "\n\n".join(
+                [f"[{c.doc_id}] {c.section_title}\n{c.text}" for c in request.retrieved_chunks]
+            )
+
         prompt_path = Path("src/ml_service/llm/prompts/process.txt")
         final_prompt = prompt_path.read_text(encoding="utf-8").format(
             doc_type_name=request.doc_type_name,
             structure_hint=request.structure_hint,
+            terminology_context=request.terminology_context,
+            chunks_context=chunks_text,
             draft=request.draft,
         )
 
@@ -120,7 +139,6 @@ def create_app() -> FastAPI:
         max_attempts = 2
         is_fallback = False
         reason_code = None
-
         result_data = {}
         improved_text = ""
         current_guard_result = None
@@ -133,47 +151,35 @@ def create_app() -> FastAPI:
                         json=payload,
                         timeout=settings.ollama_timeout_seconds,
                     )
-                    # Если сервис отвалился (500)
                     if resp.status_code != 200:
                         reason_code = "model_unavailable"
                         raise ValueError("Model API error")
 
-                    # Невалидный (нераспарсиваемый) JSON — это ошибка СХЕМЫ, а не
-                    # недоступность модели (ML-06: коды должны различаться).
                     try:
                         current_result_data = json.loads(resp.json()["response"])
                     except (ValueError, KeyError, TypeError):
                         reason_code = "schema_invalid"
-                        logger.warning(
-                            f"Ответ модели не разобрался как JSON (попытка {attempt + 1})"
-                        )
+                        logger.warning(f"JSON error (попытка {attempt + 1})")
                         continue
 
-                    # ML-04: Строгая валидация JSON
-                    if not validate_llm_response(
-                        current_result_data, request.requisite_keys
-                    ):
+                    if not validate_llm_response(current_result_data, request.requisite_keys):
                         reason_code = "schema_invalid"
-                        logger.warning(f"Ошибка схемы (попытка {attempt + 1})")
+                        logger.warning(f"Schema error (попытка {attempt + 1})")
                         continue
 
                     current_improved_text = current_result_data["improved_text"]
                     result_anchors = anchors.extract(current_improved_text)
-                    current_guard_result = fact_guard.check(
-                        source_anchors, result_anchors
-                    )
+                    current_guard_result = fact_guard.check(source_anchors, result_anchors)
 
                     result_data = current_result_data
                     improved_text = current_improved_text
 
                     if current_guard_result.verdict == "blocked":
                         reason_code = "facts_unverified"
-                        logger.warning(
-                            f"Fact Guard заблокировал ответ (попытка {attempt + 1})"
-                        )
+                        logger.warning(f"Fact Guard blocked (попытка {attempt + 1})")
                         continue
 
-                    reason_code = None  # Всё ок
+                    reason_code = None
                     break
 
                 except Exception as e:
@@ -184,7 +190,6 @@ def create_app() -> FastAPI:
                         is_fallback = True
                         break
             else:
-                # Цикл завершился без break (исчерпаны попытки)
                 is_fallback = True
 
         if is_fallback:
@@ -198,15 +203,42 @@ def create_app() -> FastAPI:
 
         clean_requisites = {}
         draft_lower = request.draft.lower()
+        
         for key in request.requisite_keys:
             if is_fallback:
                 clean_requisites[key] = None
-            else:
-                val = result_data.get(key)
-                if not val or str(val).lower() not in draft_lower:
-                    clean_requisites[key] = None
-                else:
-                    clean_requisites[key] = val
+                continue
+                
+            val = result_data.get(key)
+            if val and str(val).lower() in draft_lower:
+                clean_requisites[key] = {
+                    "value": val,
+                    "status": "found_in_draft",
+                    "source_span": val
+                }
+                continue
+
+            candidates = result_data.get("registry_candidates", {})
+            candidate_val = candidates.get(key) if isinstance(candidates, dict) else None
+            
+            if candidate_val:
+                source_chunk = None
+                cand_lower = str(candidate_val).lower()
+                for chunk in request.retrieved_chunks:
+                    if cand_lower in chunk.text.lower():
+                        source_chunk = chunk
+                        break
+                
+                if source_chunk:
+                    clean_requisites[key] = {
+                        "value": candidate_val,
+                        "status": "from_registry",
+                        "source_span": source_chunk.text,
+                        "source_doc_id": source_chunk.doc_id
+                    }
+                    continue
+            
+            clean_requisites[key] = None
 
         return ProcessResponse(
             request_id=request.request_id,
@@ -230,6 +262,5 @@ def create_app() -> FastAPI:
         )
 
     return app
-
 
 app = create_app()
