@@ -20,6 +20,7 @@ export function DocumentPage() {
   const loadDocTypes = useDocumentStore((state) => state.loadDocTypes);
   const reprocessDocument = useDocumentStore((state) => state.reprocessDocument);
   const resumePolling = useDocumentStore((state) => state.resumePolling);
+  const resetWizard = useDocumentStore((state) => state.resetWizard);
 
   usePollDocument(id || null);
 
@@ -43,6 +44,11 @@ export function DocumentPage() {
     }
   };
 
+  const handleNewDocument = () => {
+    resetWizard();
+    navigate('/wizard');
+  };
+
   if (!document) {
     return (
       <div className="space-y-4">
@@ -62,7 +68,27 @@ export function DocumentPage() {
             </div>
           </>
         ) : (
-          <p style={{ color: 'var(--muted-foreground)' }}>Загрузка документа…</p>
+          <div
+            data-testid="document-skeleton"
+            aria-label="Загружаю документ"
+            className="space-y-4"
+          >
+            <div
+              className="h-6 rounded animate-pulse"
+              style={{ background: 'var(--muted)', width: '40%' }}
+            />
+            <div
+              className="h-28 rounded animate-pulse"
+              style={{ background: 'var(--muted)' }}
+            />
+            <div
+              className="h-64 rounded animate-pulse"
+              style={{ background: 'var(--muted)' }}
+            />
+            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+              Загружаю документ…
+            </p>
+          </div>
         )}
       </div>
     );
@@ -81,12 +107,19 @@ export function DocumentPage() {
         </div>
       )}
 
-      <h1
-        className="text-xl font-bold mb-4"
-        style={{ fontFamily: 'var(--font-serif)', color: 'var(--foreground)' }}
-      >
-        {docTypeName}
-      </h1>
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <h1
+          className="text-xl font-bold"
+          style={{ fontFamily: 'var(--font-serif)', color: 'var(--foreground)' }}
+        >
+          {docTypeName}
+        </h1>
+        {document.status !== 'processing' && (
+          <PrimaryButton variant="ghost" onClick={handleNewDocument}>
+            + Создать ещё документ
+          </PrimaryButton>
+        )}
+      </div>
 
       {showTimeout ? (
         <TimeoutScreen onContinue={resumePolling} />

@@ -8,6 +8,9 @@ import type {
   DevState,
 } from '../api/types';
 
+// FE-F3, осознанное решение: черновик живёт в sessionStorage — переживает
+// F5 и перезагрузку внутри вкладки, но не тащит старый текст в новую
+// сессию после закрытия вкладки. Это выбор, а не баг.
 const WIZARD_SESSION_KEY = 'doc3-wizard-session';
 
 interface WizardSession {
@@ -86,6 +89,7 @@ interface WizardState {
   loadDevState: () => Promise<void>;
   setAiForceFailure: (enabled: boolean) => Promise<void>;
   setPollingTimedOut: (value: boolean) => void;
+  resetWizard: () => void;
 }
 
 const session = readWizardSession();
@@ -276,4 +280,27 @@ export const useDocumentStore = create<WizardState>((set, get) => ({
   },
 
   setPollingTimedOut: (value) => set({ pollingTimedOut: value }),
+
+  // FE-F2: единая точка сброса визарда. Чистит и sessionStorage,
+  // чтобы новый документ начинался с чистого шага 1.
+  resetWizard: () => {
+    set({
+      draft: '',
+      docType: null,
+      templateId: null,
+      document: null,
+      activeDocumentId: null,
+      renderFallback: null,
+      transportError: null,
+      pollingTimedOut: false,
+      isCreating: false,
+      isPatchingRequisites: false,
+      isRendering: false,
+    });
+    try {
+      sessionStorage.removeItem(WIZARD_SESSION_KEY);
+    } catch {
+      // sessionStorage недоступен — очищать нечего
+    }
+  },
 }));

@@ -64,7 +64,7 @@ export function DocTypeSelector() {
               {selected && (
                 <div
                   className="mt-2 flex items-center gap-1 text-xs font-semibold"
-                  style={{ color: '#0DC268' }}
+                  style={{ color: '#ffffff' }}
                 >
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <circle cx="6" cy="6" r="6" fill="#0DC268" />

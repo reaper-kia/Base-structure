@@ -1,4 +1,4 @@
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 
@@ -57,12 +57,19 @@ function StepBar({ current }: { current: 0 | 1 | 2 }) {
 export function AppShell() {
   const location = useLocation();
   const draft = useDocumentStore((state) => state.draft);
+  const resetWizard = useDocumentStore((state) => state.resetWizard);
+  const navigate = useNavigate();
 
   const current: 0 | 1 | 2 = location.pathname.startsWith('/documents')
     ? 2
     : draft.trim().length > 0
       ? 1
       : 0;
+
+  const handleNewDocument = () => {
+    resetWizard();
+    navigate('/wizard');
+  };
 
   return (
     <div
@@ -121,6 +128,20 @@ export function AppShell() {
                 </div>
               </div>
               <ThemeToggle />
+              <button
+                type="button"
+                onClick={handleNewDocument}
+                aria-label="Создать ещё документ: сбросить черновик и вернуться к шагу 1"
+                className="text-xs px-2.5 py-1.5 rounded-md font-medium transition-all"
+                style={{
+                  background: 'var(--header-overlay)',
+                  border: '1px solid var(--header-overlay-border)',
+                  color: 'var(--header-on-soft)',
+                  cursor: 'pointer',
+                }}
+              >
+                + Новый
+              </button>
             </div>
           </div>
           <StepBar current={current} />
