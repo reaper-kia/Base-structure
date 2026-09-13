@@ -16,13 +16,16 @@ def offline_ollama():
     original_url = settings.ollama_url
     original_timeout = settings.ollama_timeout_seconds
     original_health_timeout = settings.ollama_health_timeout_seconds
+    original_rag_enabled = settings.rag_enabled
 
     settings.ollama_url = "http://127.0.0.1:1"
     settings.ollama_timeout_seconds = 1.0
     settings.ollama_health_timeout_seconds = 1.0
+    settings.rag_enabled = False
 
     yield
 
     settings.ollama_url = original_url
     settings.ollama_timeout_seconds = original_timeout
     settings.ollama_health_timeout_seconds = original_health_timeout
+    settings.rag_enabled = original_rag_enabled

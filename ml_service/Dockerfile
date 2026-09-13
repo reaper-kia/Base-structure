@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
+COPY knowledge ./knowledge
 # Тесты и гейт качества едут в образ: эксперт должен уметь проверить
 # внутреннюю логику одной командой, не собирая окружение руками
 # (критерий 4.4 «техническая проверяемость»).

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from ml_service.config import settings
 logger = logging.getLogger(__name__)
 
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+_PLACEHOLDER = re.compile(r"<<([A-Z_]+)>>")
 
 
 class OllamaUnavailableError(RuntimeError):
@@ -37,9 +39,12 @@ def _fill(template: str, **values: str) -> str:
     скобка в них пришлось бы экранировать — ровно тот класс ошибок, который
     ломает промпт молча.
     """
-    for key, value in values.items():
-        template = template.replace(f"<<{key}>>", value)
-    return template
+    # Один проход важен для изоляции: текст из базы знаний, содержащий
+    # строку вроде <<DRAFT>>, не должен запустить повторную подстановку.
+    return _PLACEHOLDER.sub(
+        lambda match: values.get(match.group(1), match.group(0)),
+        template,
+    )
 
 
 def response_skeleton(requisite_keys: list[str]) -> str:
@@ -64,9 +69,7 @@ def _example_response(
     requisites: dict[str, str | None] = dict.fromkeys(requisite_keys)
 
     if include_addressee and "addressee" in requisites:
-        requisites["addressee"] = (
-            "Генеральному директору ООО «Ромашка» Иванову И.И."
-        )
+        requisites["addressee"] = "Генеральному директору ООО «Ромашка» Иванову И.И."
 
     if "author" in requisites:
         requisites["author"] = (
@@ -96,6 +99,7 @@ def build_process_prompt(
     doc_type_name: str,
     structure_hint: str,
     requisite_keys: list[str],
+    knowledge_context: str = "",
 ) -> str:
     return _fill(
         _read_prompt("process.txt"),
@@ -109,6 +113,9 @@ def build_process_prompt(
         EXAMPLE_WITHOUT_ADDRESSEE=_example_response(
             requisite_keys,
             include_addressee=False,
+        ),
+        KNOWLEDGE_CONTEXT=(
+            knowledge_context or "Релевантные справочные фрагменты не найдены."
         ),
         DRAFT=draft,
     )

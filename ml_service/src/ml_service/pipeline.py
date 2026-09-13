@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Protocol
 
 from ml_service import fallback
 from ml_service.config import settings
@@ -22,6 +23,8 @@ from ml_service.llm.ollama import (
     build_process_prompt,
     build_repair_prompt,
 )
+from ml_service.rag.retriever import RetrievedChunk, format_retrieved_context
+from ml_service.rag.runtime import knowledge_retriever
 from ml_service.schemas import FactGuardResult, ProcessRequest, ProcessResponse
 
 logger = logging.getLogger(__name__)
@@ -31,6 +34,39 @@ FALLBACK_VERSION = "rule-based-1.1.0"
 
 class ModelUnavailable(RuntimeError):
     """Модель недоступна, а fallback выключен -> 503 (§2)."""
+
+
+class Retriever(Protocol):
+    async def retrieve(self, query: str) -> list[RetrievedChunk]: ...
+
+
+def _retrieval_query(request: ProcessRequest) -> str:
+    """Собирает запрос без расширения публичного HTTP-контракта."""
+    return "\n".join(
+        (
+            request.doc_type_name,
+            request.structure_hint,
+            # Ollama умеет truncate, но ограничение здесь также ускоряет
+            # lexical fallback на максимально допустимом черновике.
+            request.draft[:6000],
+        )
+    )
+
+
+async def _knowledge_context(
+    request: ProcessRequest,
+    retriever: Retriever,
+) -> str:
+    try:
+        chunks = await retriever.retrieve(_retrieval_query(request))
+    except Exception as exc:  # noqa: BLE001 - RAG обязан деградировать без отказа
+        logger.warning("RAG недоступен, продолжаю без контекста: %s", exc)
+        return ""
+
+    return format_retrieved_context(
+        chunks,
+        max_chars=settings.rag_max_context_chars,
+    )
 
 
 def _guard_of(
@@ -92,9 +128,17 @@ async def _ask_model(
 async def process(
     request: ProcessRequest,
     client: OllamaClient | None = None,
+    retriever: Retriever | None = None,
 ) -> ProcessResponse:
     started = time.perf_counter()
     client = client or OllamaClient()
+
+    knowledge_context = ""
+    if settings.rag_enabled:
+        knowledge_context = await _knowledge_context(
+            request,
+            retriever or knowledge_retriever,
+        )
 
     source_anchors = anchors.extract(request.draft)
     response_schema = llm_schema.build_response_schema(request.requisite_keys)
@@ -103,6 +147,7 @@ async def process(
         doc_type_name=request.doc_type_name,
         structure_hint=request.structure_hint,
         requisite_keys=request.requisite_keys,
+        knowledge_context=knowledge_context,
     )
 
     reason_code = None

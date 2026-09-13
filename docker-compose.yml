@@ -2,7 +2,7 @@ name: doc3
 
 # Локальный запуск:
 #   cp .env.example .env && docker compose up -d --build
-#   make pull-model          # один раз: ~5 ГБ весов в том ollama_models
+#   make pull-model          # один раз: ~6 ГБ весов в том ollama_models
 #
 # MAX-бот не входит в базовый стек: он требует токена и внешней сети.
 #   docker compose --profile bot up -d
@@ -153,6 +153,18 @@ services:
       OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_TIMEOUT_SECONDS: "90"
       FALLBACK_ENABLED: "true"
+      RAG_ENABLED: "${RAG_ENABLED:-true}"
+      RAG_VECTOR_ENABLED: "${RAG_VECTOR_ENABLED:-true}"
+      RAG_EMBED_MODEL: "${RAG_EMBED_MODEL:-bge-m3}"
+      RAG_EMBED_TIMEOUT_SECONDS: "${RAG_EMBED_TIMEOUT_SECONDS:-15}"
+      RAG_EMBED_KEEP_ALIVE: "0"
+      RAG_TOP_K: "${RAG_TOP_K:-3}"
+      RAG_MIN_SCORE: "${RAG_MIN_SCORE:-0.2}"
+      RAG_MAX_CONTEXT_CHARS: "${RAG_MAX_CONTEXT_CHARS:-3000}"
+      RAG_KNOWLEDGE_DIR: /app/knowledge
+    volumes:
+      # Справочники можно обновлять локально без пересборки образа.
+      - ./ml_service/knowledge:/app/knowledge:ro
     ports:
       - "8100:8100"
     depends_on:

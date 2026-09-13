@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # Версия промпта/схемы. Используется в ключе кэша для инвалидации
     # при обновлении модели или промпта.
-    prompt_version: str = "1.1.0"
+    prompt_version: str = "1.2.0"
 
     # Максимальное время обработки документа (дедлайн).
     processing_deadline_seconds: int = 180

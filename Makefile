@@ -3,6 +3,7 @@
         docx-samples demo-drafts pull-model models smoke smoke-prod prod prod-down
 
 OLLAMA_MODEL ?= qwen2.5:7b-instruct
+RAG_EMBED_MODEL ?= bge-m3
 
 help: ## Список команд
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -40,8 +41,9 @@ db-shell: ## psql внутри контейнера базы
 
 # ---------- модель ----------
 
-pull-model: ## Скачать веса модели (~5 ГБ, один раз после первого make up)
+pull-model: ## Скачать генеративную и embedding-модель (~6 ГБ)
 	docker compose exec ollama ollama pull $(OLLAMA_MODEL)
+	docker compose exec ollama ollama pull $(RAG_EMBED_MODEL)
 
 models: ## Проверить, что веса на месте (перед демо — обязательно)
 	docker compose exec ollama ollama list

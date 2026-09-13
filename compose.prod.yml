@@ -8,6 +8,7 @@ x-logging: &default-logging
 #   cp .env.example .env.prod && отредактировать секреты и ORG_NAME
 #   docker compose -f compose.prod.yml up -d --build
 #   docker compose -f compose.prod.yml exec ollama ollama pull qwen2.5:7b-instruct
+#   docker compose -f compose.prod.yml exec ollama ollama pull bge-m3
 #
 # MAX-бот подключается отдельным профилем:
 #   docker compose -f compose.prod.yml --profile bot up -d
@@ -236,6 +237,16 @@ services:
       OLLAMA_MODEL: qwen2.5:7b-instruct
       OLLAMA_TIMEOUT_SECONDS: "220"
       FALLBACK_ENABLED: "true"
+      RAG_ENABLED: "true"
+      RAG_VECTOR_ENABLED: "true"
+      RAG_EMBED_MODEL: bge-m3
+      RAG_EMBED_TIMEOUT_SECONDS: "15"
+      # Embedding-модель выгружается до запуска тяжёлой 7B-генерации.
+      RAG_EMBED_KEEP_ALIVE: "0"
+      RAG_TOP_K: "3"
+      RAG_MIN_SCORE: "0.2"
+      RAG_MAX_CONTEXT_CHARS: "3000"
+      RAG_KNOWLEDGE_DIR: /app/knowledge
     depends_on:
       ollama:
         condition: service_healthy

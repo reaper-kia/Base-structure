@@ -23,6 +23,8 @@ ReasonCode = Literal[
     "facts_unverified",  # Fact Guard дважды вернул blocked
     "empty_text",  # модель вернула пустой improved_text
 ]
+RagState = Literal["disabled", "not_ready", "empty", "ready"]
+RetrievalMethod = Literal["vector", "lexical"]
 
 
 class ProcessRequest(BaseModel):
@@ -65,3 +67,14 @@ class ModelHealth(BaseModel):
     supported_tasks: list[str]
     ollama_url: str
     detail: str | None = None
+
+
+class RagHealth(BaseModel):
+    enabled: bool
+    state: RagState
+    embedding_model: str | None
+    knowledge_files: int
+    indexed_chunks: int
+    vector_available: bool
+    last_method: RetrievalMethod | None = None
+    last_error: str | None = None
