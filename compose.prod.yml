@@ -235,7 +235,7 @@ services:
     environment:
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:7b-instruct
-      OLLAMA_TIMEOUT_SECONDS: "220"
+      OLLAMA_TIMEOUT_SECONDS: "600"
       FALLBACK_ENABLED: "true"
       RAG_ENABLED: "true"
       RAG_VECTOR_ENABLED: "true"
