@@ -21,7 +21,11 @@ _CONFIG_DIR = Path(__file__).resolve().parents[2] / "config" / "doc_types"
 # осознанное решение пользователя (TL-05, PATCH /requisites), а не догадка
 # системы. Сценарий 6 требует того же для reprocess.
 _USER_DECIDED_STATUSES = frozenset(
-    {RequisiteStatus.USER_PROVIDED, RequisiteStatus.LEFT_BLANK}
+    {
+        RequisiteStatus.USER_PROVIDED,
+        RequisiteStatus.FROM_REGISTRY,
+        RequisiteStatus.LEFT_BLANK,
+    }
 )
 
 
@@ -39,8 +43,8 @@ def validate(
 
     existing - реквизиты документа до этого запуска (PATCH или прошлая
     обработка). Если пользователь уже принял решение по ключу
-    (user_provided/left_blank), это решение переносится как есть - LLM не
-    имеет права его переписать.
+    (user_provided/from_registry/left_blank), это решение переносится как есть —
+    LLM не имеет права его переписать.
     """
 
     schema = load_doc_type(doc_type)

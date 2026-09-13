@@ -32,6 +32,20 @@ describe('RequisiteChip', () => {
     expect(screen.queryByText(/Подставлено системой/)).not.toBeInTheDocument();
   });
 
+  it('from_registry показывает подтверждённое происхождение', () => {
+    const req: RequisiteState = {
+      key: 'addressee',
+      label: 'Адресат',
+      value: 'Иванов Иван Иванович',
+      status: 'from_registry',
+      required: true,
+    };
+
+    render(<RequisiteChip requisite={req} onEdit={() => {}} />);
+
+    expect(screen.getByText('Подтверждено по справочнику')).toBeInTheDocument();
+  });
+
   it('missing показывает подсказку про [Адресат]', () => {
     const req: RequisiteState = {
       key: 'addressee',

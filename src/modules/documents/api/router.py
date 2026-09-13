@@ -48,6 +48,7 @@ from src.modules.documents.application.services.doc_type_registry import (
 from src.modules.documents.domain.entities import Document
 from src.modules.documents.domain.enums import (
     DocType,
+    DocumentChannel,
     DocumentStatus,
     ProcessingStage,
     RequisiteStatus,
@@ -125,6 +126,7 @@ def _to_response(document: Document) -> DocumentResponse:
         stage=(document.stage.value if document.stage is not None else None),
         doc_type=document.doc_type.value,
         template_id=document.template_id,
+        channel=document.channel.value,
         draft=document.draft,
         improved_text=document.improved_text,
         changes=list(document.changes),
@@ -197,6 +199,7 @@ async def create_document(
         draft=payload.draft,
         doc_type=DocType(payload.doc_type),
         template_id=payload.template_id,
+        channel=DocumentChannel(payload.channel),
     )
 
     async with uow_factory() as uow:
@@ -276,6 +279,7 @@ async def update_requisites(
         requisites_by_key = {
             requisite.key: requisite for requisite in document.requisites
         }
+        registry_keys = set(payload.from_registry)
 
         for key, raw_value in payload.values.items():
             if key not in schema_keys:
@@ -293,7 +297,11 @@ async def update_requisites(
                 requisite.status = RequisiteStatus.LEFT_BLANK
             else:
                 requisite.value = value
-                requisite.status = RequisiteStatus.USER_PROVIDED
+                requisite.status = (
+                    RequisiteStatus.FROM_REGISTRY
+                    if key in registry_keys
+                    else RequisiteStatus.USER_PROVIDED
+                )
 
         await uow.documents.update(document)
         await uow.commit()

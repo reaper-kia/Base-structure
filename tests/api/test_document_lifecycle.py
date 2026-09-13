@@ -98,6 +98,29 @@ def test_create_document_returns_processing(
 
     assert payload["status"] == "processing"
     assert payload["stage"] == "llm"
+    assert payload["channel"] == "web"
+
+
+@pytest.mark.api
+def test_bot_channel_is_persisted_and_visible_in_trace(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/documents",
+        json={
+            "draft": "Текст из бота",
+            "doc_type": "memo",
+            "template_id": "classic",
+            "channel": "bot",
+        },
+    )
+
+    assert response.status_code == 202
+    document_id = response.json()["id"]
+    assert response.json()["channel"] == "bot"
+    assert client.get(f"/api/documents/{document_id}").json()["channel"] == "bot"
+    attempts = client.get(f"/api/trace/{document_id}").json()
+    assert attempts[-1]["channel"] == "bot"
 
 
 @pytest.mark.api

@@ -51,6 +51,29 @@ def test_backend_split_does_not_overwrite_user_position() -> None:
     assert requisites["position"].status == RequisiteStatus.USER_PROVIDED
 
 
+def test_reprocess_preserves_confirmed_registry_value() -> None:
+    existing = [
+        Requisite(
+            key="addressee",
+            label="Адресат",
+            value="Иванов Иван Иванович",
+            status=RequisiteStatus.FROM_REGISTRY,
+            required=True,
+        )
+    ]
+
+    requisites = _by_key(
+        validate(
+            "memo",
+            {"addressee": "Другое значение из ответа модели"},
+            existing=existing,
+        )
+    )
+
+    assert requisites["addressee"].value == "Иванов Иван Иванович"
+    assert requisites["addressee"].status == RequisiteStatus.FROM_REGISTRY
+
+
 def test_reference_author_is_not_split_without_position_field() -> None:
     requisites = _by_key(
         validate(

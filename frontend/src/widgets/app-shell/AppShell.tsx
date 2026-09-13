@@ -1,6 +1,7 @@
 import { Outlet, useLocation, Link } from 'react-router-dom';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
+import { BackToTop } from '../../shared/ui/BackToTop';
 
 const STEPS = [
   { label: 'Черновик', sub: 'Введите текст' },
@@ -26,7 +27,7 @@ function StepBar({ current }: { current: 0 | 1 | 2 }) {
                 color: '#fff',
               }}
             >
-              {index < current ? '✓' : index + 1}
+              {index < current ? <span className="anim-check">✓</span> : index + 1}
             </div>
             <span
               className="text-xs text-center whitespace-nowrap"
@@ -179,7 +180,7 @@ export function AppShell() {
               ].map((feature) => (
                 <div
                   key={feature}
-                  className="text-xs px-3 py-1.5 rounded-md font-medium"
+                  className="anim-badge text-xs px-3 py-1.5 rounded-md font-medium"
                   style={{
                     background: 'var(--header-overlay)',
                     color: 'var(--header-on-soft)',
@@ -241,6 +242,8 @@ export function AppShell() {
           </span>
         </div>
       </footer>
+
+      <BackToTop />
     </div>
   );
 }

@@ -126,6 +126,7 @@ async def run(
             "input": _draft_fingerprint(document.draft),
             "doc_type": document.doc_type.value,
             "template_id": document.template_id,
+            "channel": document.channel.value,
             "prompt_version": settings.prompt_version,
             "bypass_cache": bypass_cache,
             # TL-14: помечаем, что попытка запущена с имитацией отказа.

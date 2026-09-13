@@ -19,6 +19,7 @@ class DocumentModel(Base):
     draft: Mapped[str] = mapped_column(Text)
     doc_type: Mapped[str] = mapped_column(String(32))
     template_id: Mapped[str] = mapped_column(String(64))
+    channel: Mapped[str] = mapped_column(String(8), default="web")
     status: Mapped[str] = mapped_column(String(32))
 
     stage: Mapped[Optional[str]] = mapped_column(

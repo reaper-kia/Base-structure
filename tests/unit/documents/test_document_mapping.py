@@ -4,7 +4,7 @@ from src.modules.documents.domain.entities import (
     Document,
     Requisite,
 )
-from src.modules.documents.domain.enums import RequisiteStatus
+from src.modules.documents.domain.enums import DocumentChannel, RequisiteStatus
 from src.modules.documents.infra.repositories import (
     _to_domain,
     _to_model,
@@ -15,6 +15,7 @@ from src.modules.documents.infra.repositories import (
 def test_document_mapping_round_trip() -> None:
     document = Document(
         draft="Исходный текст",
+        channel=DocumentChannel.BOT,
         requisites=[
             Requisite(
                 key="addressee",

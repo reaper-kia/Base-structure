@@ -5,6 +5,7 @@ export type ProcessingStage = 'llm' | 'fact_guard' | 'validation';
 export type RequisiteStatus =
   | 'found_in_draft'
   | 'user_provided'
+  | 'from_registry'
   | 'auto_filled'
   | 'missing'
   | 'left_blank';

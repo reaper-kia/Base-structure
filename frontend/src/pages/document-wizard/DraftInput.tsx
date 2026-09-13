@@ -121,7 +121,17 @@ export function DraftInput({ onNext }: DraftInputProps) {
             className="block text-xs font-semibold uppercase tracking-widest mb-2"
             style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
           >
-            Черновики организаторов
+            Голосовой ввод
+          </div>
+          <div className="mb-4">
+            <SpeechInput onTranscript={appendTranscript} />
+          </div>
+
+          <div
+            className="block text-xs font-semibold uppercase tracking-widest mb-2"
+            style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
+          >
+            Черновики организаторов и инструменты
           </div>
           <div className="space-y-2">
             <button
@@ -138,7 +148,6 @@ export function DraftInput({ onNext }: DraftInputProps) {
             >
               Вставить из буфера
             </button>
-            <SpeechInput onTranscript={appendTranscript} />
             {DEMO_DRAFTS.map((demo) => (
               <button
                 key={demo.id}

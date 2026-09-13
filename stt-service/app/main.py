@@ -17,6 +17,7 @@ from app.config import (
     MODEL_NAME,
     MODEL_PATH,
     PORT,
+    RECOGNITION_TIMEOUT_SECONDS,
     SPOOL_MEMORY_LIMIT_BYTES,
     UPLOAD_CHUNK_SIZE_BYTES,
 )
@@ -159,6 +160,10 @@ async def health() -> HealthResponse | JSONResponse:
             "model": ErrorResponse,
             "description": "Модель Vosk не загружена",
         },
+        504: {
+            "model": ErrorResponse,
+            "description": "Истёк тайм-аут распознавания",
+        },
     },
 )
 async def transcribe(
@@ -201,10 +206,22 @@ async def transcribe(
             temporary_audio.seek(0)
 
             try:
-                result = await asyncio.to_thread(
-                    recognizer.recognize,
-                    temporary_audio,
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        recognizer.recognize,
+                        temporary_audio,
+                    ),
+                    timeout=RECOGNITION_TIMEOUT_SECONDS,
                 )
+            except TimeoutError as exc:
+                logger.error(
+                    "Распознавание превысило тайм-аут %.1f с",
+                    RECOGNITION_TIMEOUT_SECONDS,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail="распознавание заняло слишком много времени, повторите попытку",
+                ) from exc
             except InvalidAudioError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

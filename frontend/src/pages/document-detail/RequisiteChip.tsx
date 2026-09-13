@@ -21,6 +21,13 @@ const STATUS_STYLES = {
     label: 'Уточнено вами',
     icon: '✎',
   },
+  from_registry: {
+    borderColor: 'var(--chip-auto-border)',
+    bgColor: 'var(--chip-auto-bg)',
+    textColor: 'var(--chip-auto-text)',
+    label: 'Подтверждено по справочнику',
+    icon: '✓',
+  },
   auto_filled: {
     borderColor: 'var(--chip-auto-border)',
     bgColor: 'var(--chip-auto-bg)',

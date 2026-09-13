@@ -206,6 +206,7 @@ class DocumentApiClient:
                 "draft": draft,
                 "doc_type": doc_type,
                 "template_id": template_id,
+                "channel": "bot",
             },
             retry_ambiguous_errors=False,
         )

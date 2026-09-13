@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from src.modules.documents.domain.enums import (
     DocType,
+    DocumentChannel,
     DocumentStatus,
     ProcessingStage,
     RequisiteStatus,
@@ -32,6 +33,7 @@ class Document:
     draft: str = ""
     doc_type: DocType = DocType.MEMO
     template_id: str = "classic"
+    channel: DocumentChannel = DocumentChannel.WEB
     status: DocumentStatus = DocumentStatus.PROCESSING
     stage: Optional[ProcessingStage] = ProcessingStage.LLM
     improved_text: Optional[str] = None

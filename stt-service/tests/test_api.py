@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
+from time import sleep
 from typing import BinaryIO
 
 import pytest
@@ -115,6 +116,26 @@ def test_success_response_keeps_frontend_contract(
         "text": "тестовая расшифровка",
         "duration_seconds": 1.25,
         "model": "vosk-model-small-ru-0.22",
+    }
+
+
+def test_recognition_timeout_returns_504(monkeypatch: pytest.MonkeyPatch) -> None:
+    class SlowRecognizer(StubRecognizer):
+        def recognize(self, _: BinaryIO) -> RecognitionResult:
+            sleep(0.05)
+            return self.result
+
+    monkeypatch.setattr(stt_main, "RECOGNITION_TIMEOUT_SECONDS", 0.001)
+
+    with client_with_recognizer(monkeypatch, SlowRecognizer()) as client:
+        response = client.post(
+            "/stt",
+            files={"audio": ("recording.wav", b"audio", "audio/wav")},
+        )
+
+    assert response.status_code == 504
+    assert response.json() == {
+        "detail": "распознавание заняло слишком много времени, повторите попытку"
     }
 
 

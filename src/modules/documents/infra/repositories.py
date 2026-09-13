@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.documents.domain.entities import Document, Requisite
 from src.modules.documents.domain.enums import (
     DocType,
+    DocumentChannel,
     DocumentStatus,
     ProcessingStage,
     RequisiteStatus,
@@ -40,6 +41,7 @@ def _to_model(doc: Document) -> DocumentModel:
         draft=doc.draft,
         doc_type=doc.doc_type.value,
         template_id=doc.template_id,
+        channel=doc.channel.value,
         status=doc.status.value,
         stage=(doc.stage.value if doc.stage is not None else None),
         improved_text=doc.improved_text,
@@ -70,6 +72,7 @@ def _to_domain(row: DocumentModel) -> Document:
         draft=row.draft,
         doc_type=DocType(row.doc_type),
         template_id=row.template_id,
+        channel=DocumentChannel(row.channel),
         status=DocumentStatus(row.status),
         stage=(ProcessingStage(row.stage) if row.stage is not None else None),
         improved_text=row.improved_text,

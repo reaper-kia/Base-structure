@@ -18,6 +18,7 @@ ci-venv/
 .env
 .env.*
 !.env.example
+!frontend/.env.test
 
 # Pytest / coverage
 .pytest_cache/

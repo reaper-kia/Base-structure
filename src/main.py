@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Новый модуль -> добавить сюда одну строку и один include_router ниже.
 from src.core.config import settings
 from src.modules.documents.api.router import router as documents_router
+from src.modules.reference_data.api.router import router as reference_data_router
 from src.modules.templates.api.router import router as templates_router
 from src.shared.infra.database.health import check_database_connection
 from src.shared.infra.database.session import get_async_session
@@ -43,6 +44,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(documents_router)
+    app.include_router(reference_data_router)
     app.include_router(templates_router)
 
     @app.exception_handler(Exception)

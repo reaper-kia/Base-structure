@@ -11,6 +11,7 @@ export function WizardPage() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState<1 | 2>(1);
+  const [navDir, setNavDir] = useState<'forward' | 'back'>('forward');
 
   const draft = useDocumentStore((state) => state.draft);
   const docType = useDocumentStore((state) => state.docType);
@@ -33,12 +34,21 @@ export function WizardPage() {
     }
   }, [docTypes.length, templates.length, loadDocTypes, loadTemplates]);
 
-  // После успешного создания уходим на страницу документа
   useEffect(() => {
     if (document?.id && !isCreating && step === 2) {
       navigate(`/documents/${document.id}`);
     }
   }, [document?.id, isCreating, step, navigate]);
+
+  const goTo = (next: 1 | 2) => {
+    setNavDir(next >= step ? 'forward' : 'back');
+    setStep(next);
+  };
+
+  const selectedType = docTypes.find((type) => type.id === docType) ?? null;
+  const requiredRequisites = selectedType
+    ? selectedType.requisites.filter((req) => req.required)
+    : [];
 
   const canCreate = Boolean(
     draft.trim().length >= 10 && docType && templateId && !isCreating
@@ -56,14 +66,24 @@ export function WizardPage() {
         </div>
       )}
 
-      {step === 1 && <DraftInput onNext={() => setStep(2)} />}
+      {step === 1 && (
+        <div
+          key="step-1"
+          className={navDir === 'forward' ? 'anim-enter-right' : 'anim-enter-left'}
+        >
+          <DraftInput onNext={() => goTo(2)} />
+        </div>
+      )}
 
       {step === 2 && (
-        <div className="space-y-6">
+        <div
+          key="step-2"
+          className={navDir === 'forward' ? 'anim-enter-right' : 'anim-enter-left'}
+        >
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => goTo(1)}
               className="text-sm px-4 py-2.5"
               style={{ color: 'var(--muted-foreground)' }}
             >
@@ -71,13 +91,49 @@ export function WizardPage() {
             </button>
           </div>
 
-          <DocTypeSelector />
-          <TemplateSelector />
+          <div className="mt-4">
+            <DocTypeSelector />
+            <TemplateSelector />
+          </div>
+
+          {requiredRequisites.length > 0 && (
+            <div
+              className="p-4 mb-6"
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+              }}
+            >
+              <div
+                className="text-xs font-semibold uppercase tracking-wider mb-2"
+                style={{ color: 'var(--muted-foreground)' }}
+              >
+                Обязательные реквизиты для «{selectedType?.name}»
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {requiredRequisites.map((req) => (
+                  <span
+                    key={req.key}
+                    className="text-xs px-2.5 py-1"
+                    style={{
+                      background: 'var(--muted)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius)',
+                      color: 'var(--foreground)',
+                    }}
+                  >
+                    {req.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => goTo(1)}
               className="text-sm"
               style={{ color: 'var(--muted-foreground)' }}
             >

@@ -1,6 +1,11 @@
 from enum import StrEnum
 
 
+class DocumentChannel(StrEnum):
+    WEB = "web"
+    BOT = "bot"
+
+
 class DocType(StrEnum):
     MEMO = "memo"  # служебная записка
     REPORT = "report"  # докладная записка
@@ -11,6 +16,7 @@ class DocType(StrEnum):
 class RequisiteStatus(StrEnum):
     FOUND_IN_DRAFT = "found_in_draft"  # ИИ нашёл значение в черновике
     USER_PROVIDED = "user_provided"  # пользователь вписал руками
+    FROM_REGISTRY = "from_registry"  # пользователь подтвердил подсказку реестра
     AUTO_FILLED = "auto_filled"  # система подставила достоверное (дата)
     MISSING = "missing"  # нет значения, и это проблема
     LEFT_BLANK = "left_blank"  # пользователь осознанно оставил пустым

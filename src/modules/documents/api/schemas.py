@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -18,6 +19,8 @@ class CreateDocumentRequest(BaseModel):
         min_length=1,
         max_length=64,
     )
+
+    channel: Literal["web", "bot"] = "web"
 
     @field_validator("draft")
     @classmethod
@@ -46,6 +49,7 @@ class DocumentResponse(BaseModel):
     stage: str | None
     doc_type: str
     template_id: str
+    channel: Literal["web", "bot"]
     draft: str
     improved_text: str | None = None
     changes: list[dict] = Field(default_factory=list)
@@ -58,6 +62,9 @@ class DocumentResponse(BaseModel):
 
 class UpdateRequisitesRequest(BaseModel):
     values: dict[str, str | None]
+    # Ключ попадает сюда только после явного выбора пользователем подсказки,
+    # полученной от ReferenceDataSource. По умолчанию PATCH остаётся ручным.
+    from_registry: list[str] = Field(default_factory=list)
 
 
 class UpdateTextRequest(BaseModel):

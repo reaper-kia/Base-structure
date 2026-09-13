@@ -200,6 +200,27 @@ def test_patch_leaves_unmentioned_keys_untouched(
 
 
 @pytest.mark.api
+def test_confirmed_registry_value_gets_distinct_status(
+    client: TestClient,
+) -> None:
+    created = create_processed_document(client)
+
+    response = client.patch(
+        f"/api/documents/{created['id']}/requisites",
+        json={
+            "values": {"addressee": "Иванов Иван Иванович"},
+            "from_registry": ["addressee"],
+        },
+    )
+
+    assert response.status_code == 200
+    addressee = next(
+        item for item in response.json()["requisites"] if item["key"] == "addressee"
+    )
+    assert addressee["status"] == "from_registry"
+
+
+@pytest.mark.api
 def test_patch_while_processing_returns_409(
     client: TestClient,
     repository: InMemoryDocumentRepository,

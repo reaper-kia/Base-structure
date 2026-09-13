@@ -15,6 +15,7 @@ from app.max_client import MaxClient, MaxRecipient, parse_inbound_update
 class DocumentApiClientTests(unittest.IsolatedAsyncioTestCase):
     async def test_complete_document_flow(self) -> None:
         document_id = str(uuid4())
+        requests: list[httpx.Request] = []
         responses = deque(
             [
                 httpx.Response(
@@ -90,6 +91,7 @@ class DocumentApiClientTests(unittest.IsolatedAsyncioTestCase):
         )
 
         async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
             response = responses.popleft()
             response.request = request
             return response
@@ -114,6 +116,7 @@ class DocumentApiClientTests(unittest.IsolatedAsyncioTestCase):
             rendered = await client.render_document(created)
 
         self.assertEqual(len(templates), 1)
+        self.assertEqual(json.loads(requests[2].content)["channel"], "bot")
         self.assertEqual(snapshot.requisites[0].status, "missing")
         self.assertEqual(rendered.filename, "memo.docx")
         self.assertFalse(responses)

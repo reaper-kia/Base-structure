@@ -1,6 +1,5 @@
 import { useDocumentStore } from '../../shared/store/documentStore';
-import { FieldLabel } from '../../shared/ui/FieldLabel';
-import { DocIcon, type DocIconId } from '../../shared/ui/docIcons';
+import { DocTypeIcon } from '../../shared/ui/DocTypeIcon';
 
 export function DocTypeSelector() {
   const docTypes = useDocumentStore((state) => state.docTypes);
@@ -9,9 +8,14 @@ export function DocTypeSelector() {
 
   return (
     <div className="mb-6">
-      <FieldLabel>Что за документ — структура и обязательные поля</FieldLabel>
+      <label
+        className="block text-xs font-semibold uppercase tracking-widest mb-2"
+        style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
+      >
+        Тип документа
+      </label>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {docTypes.map((type) => {
+        {docTypes.map((type, index) => {
           const selected = docType === type.id;
           return (
             <button
@@ -21,43 +25,30 @@ export function DocTypeSelector() {
               onClick={() => setDocType(type.id)}
               aria-pressed={selected}
               aria-label={`Выбрать тип документа: ${type.name}`}
-              className="text-left p-3 transition-all hover:shadow-md"
+              className="anim-card text-left p-3 transition-all hover:shadow-md"
               style={{
+                animationDelay: `${index * 60}ms`,
                 background: selected ? 'var(--primary)' : 'var(--card)',
-                border: selected
-                  ? '2px solid var(--primary)'
-                  : '2px solid var(--border)',
+                border: selected ? '2px solid var(--primary)' : '2px solid var(--border)',
                 borderRadius: 'var(--radius)',
                 color: selected ? '#fff' : 'var(--foreground)',
               }}
             >
               <div
-                aria-hidden="true"
                 className="mb-3 flex items-center justify-center w-11 h-11 rounded-xl"
                 style={{
-                  background: selected
-                    ? 'rgba(255,255,255,0.15)'
-                    : 'var(--muted)',
+                  background: selected ? 'rgba(255,255,255,0.15)' : 'var(--muted)',
                   border: selected
                     ? '1.5px solid rgba(255,255,255,0.25)'
                     : '1.5px solid var(--border)',
                 }}
               >
-                <DocIcon
-                  id={type.id as DocIconId}
-                  color={selected ? '#fff' : 'var(--primary)'}
-                />
+                <DocTypeIcon typeId={type.id} color={selected ? '#fff' : 'var(--primary)'} />
               </div>
-              <div className="text-sm font-semibold leading-tight mb-1">
-                {type.name}
-              </div>
+              <div className="text-sm font-semibold leading-tight mb-1">{type.name}</div>
               <div
                 className="text-xs leading-tight"
-                style={{
-                  color: selected
-                    ? 'rgba(255,255,255,0.6)'
-                    : 'var(--muted-foreground)',
-                }}
+                style={{ color: selected ? 'rgba(255,255,255,0.6)' : 'var(--muted-foreground)' }}
               >
                 {type.description}
               </div>
@@ -66,7 +57,7 @@ export function DocTypeSelector() {
                   className="mt-2 flex items-center gap-1 text-xs font-semibold"
                   style={{ color: '#0DC268' }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                     <circle cx="6" cy="6" r="6" fill="#0DC268" />
                     <path
                       d="M3.5 6l1.8 1.8L8.5 4.5"
