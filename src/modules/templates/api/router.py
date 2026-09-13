@@ -12,8 +12,9 @@ import re
 from typing import Annotated
 
 import yaml
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from src.modules.templates.api.dependencies import require_admin_token
 from src.modules.templates.api.schemas import TemplateItem, TemplateListResponse
 from src.modules.templates.application.template_service import (
     TemplateLoader,
@@ -52,7 +53,10 @@ async def list_templates() -> TemplateListResponse:
     status_code=201,
     summary="Загрузка и автоматический разбор DOCX-шаблона",
 )
-async def upload_template(file: Annotated[UploadFile, File(...)]) -> dict:
+async def upload_template(
+    file: Annotated[UploadFile, File(...)],
+    _admin: None = Depends(require_admin_token),
+) -> dict:
     data = await file.read()
 
     if len(data) > MAX_UPLOAD_BYTES:

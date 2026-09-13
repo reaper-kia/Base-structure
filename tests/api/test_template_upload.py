@@ -17,6 +17,7 @@ from src.main import app
 ORGANIZER_TEMPLATE = Path(
     "docs/organizer-materials/шаблоны/Шаблон__Современный регламентный.docx"
 )
+ADMIN_TOKEN = "test-admin-secret-token-42"
 
 
 @pytest.fixture
@@ -26,6 +27,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         config.settings, "user_templates_dir", str(tmp_path / "templates")
     )
+    monkeypatch.setattr(config.settings, "admin_token", ADMIN_TOKEN)
 
     with TestClient(app) as test_client:
         yield test_client
@@ -34,6 +36,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def upload(client: TestClient, filename: str = "my-template.docx"):
     return client.post(
         "/api/templates/upload",
+        headers={"X-Admin-Token": ADMIN_TOKEN},
         files={
             "file": (
                 filename,
@@ -118,7 +121,66 @@ def test_rules_are_written_next_to_the_file(client: TestClient) -> None:
 def test_not_a_docx_is_rejected(client: TestClient) -> None:
     response = client.post(
         "/api/templates/upload",
+        headers={"X-Admin-Token": ADMIN_TOKEN},
         files={"file": ("fake.docx", b"not a zip at all", "application/octet-stream")},
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.api
+def test_upload_without_admin_token_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/templates/upload",
+        files={
+            "file": (
+                "template.docx",
+                ORGANIZER_TEMPLATE.read_bytes(),
+                "application/vnd.openxmlformats-officedocument"
+                ".wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Недействительный ключ администратора"}
+
+
+@pytest.mark.api
+def test_upload_with_wrong_admin_token_is_rejected(client: TestClient) -> None:
+    response = client.post(
+        "/api/templates/upload",
+        headers={"X-Admin-Token": "wrong-token"},
+        files={
+            "file": (
+                "template.docx",
+                ORGANIZER_TEMPLATE.read_bytes(),
+                "application/vnd.openxmlformats-officedocument"
+                ".wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 401
+
+
+@pytest.mark.api
+def test_empty_configured_admin_token_fails_closed(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(config.settings, "admin_token", "")
+
+    response = client.post(
+        "/api/templates/upload",
+        headers={"X-Admin-Token": "any-value"},
+        files={
+            "file": (
+                "template.docx",
+                ORGANIZER_TEMPLATE.read_bytes(),
+                "application/vnd.openxmlformats-officedocument"
+                ".wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 401

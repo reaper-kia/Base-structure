@@ -64,6 +64,30 @@ def test_prompt_contains_both_few_shot_examples() -> None:
     assert '"addressee": null' in prompt
 
 
+def test_prompt_teaches_model_to_keep_author_and_position_separate() -> None:
+    prompt = build_process_prompt(
+        draft="черновик",
+        doc_type_name="Служебная записка",
+        structure_hint="суть",
+        requisite_keys=["author", "position"],
+    )
+
+    assert '"author": "Петров П.П."' in prompt
+    assert '"position": "Начальник отдела аналитики"' in prompt
+    assert "не склеивай их" in prompt
+
+
+def test_prompt_keeps_combined_reference_author_without_position_key() -> None:
+    prompt = build_process_prompt(
+        draft="черновик",
+        doc_type_name="Информационная справка",
+        structure_hint="сведения -> составитель",
+        requisite_keys=["author"],
+    )
+
+    assert '"author": "Начальник отдела аналитики Петров П.П."' in prompt
+
+
 def test_injection_does_not_break_the_service() -> None:
     assert process(INJECTION)["improved_text"].strip()
 

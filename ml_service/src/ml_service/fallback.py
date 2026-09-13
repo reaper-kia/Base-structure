@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import re
 
+from ml_service.requisite_normalizer import normalize_author_position
+
 # Метка в начале строки -> ключ реквизита. Значение берётся дословно.
 LABEL_TO_KEY: dict[str, str] = {
     "кому": "addressee",
@@ -199,7 +201,8 @@ def extract_requisites(draft: str, requisite_keys: list[str]) -> dict[str, str |
         if value and key not in found:
             found[key] = value
 
-    return {key: found.get(key) for key in requisite_keys}
+    requisites = {key: found.get(key) for key in requisite_keys}
+    return normalize_author_position(requisites)
 
 
 def improve_text(draft: str, structure_hint: str = "") -> str:

@@ -70,6 +70,36 @@ describe('FE-09: один API, два адаптера', () => {
     expect(templates[0].id).toBe('classic');
   });
 
+  it('httpApi отправляет DOCX как multipart с административным токеном', async () => {
+    vi.stubEnv('VITE_USE_MOCK', 'false');
+    const fetchMock = vi.fn().mockResolvedValue(
+      fakeResponse({
+        id: 'my-template',
+        name: 'Загруженный шаблон',
+        rules: {},
+        warnings: [],
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { httpApi } = await import('../httpApi');
+    const file = new File(['docx'], 'my-template.docx');
+    await httpApi.uploadTemplate(file, 'admin-secret');
+
+    const options = fetchMock.mock.calls[0][1] as RequestInit;
+    const headers = options.headers as Record<string, string>;
+    const body = options.body as FormData;
+    const uploadedFile = body.get('file') as File;
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/templates/upload');
+    expect(options.method).toBe('POST');
+    expect(headers['X-Admin-Token']).toBe('admin-secret');
+    expect(headers['Content-Type']).toBeUndefined();
+    expect(body).toBeInstanceOf(FormData);
+    expect(uploadedFile.name).toBe('my-template.docx');
+    expect(uploadedFile.size).toBe(file.size);
+  });
+
   it('справка: 5 реквизитов, 4 обязательных, адресат необязательный', async () => {
     const { mockApi } = await import('../mock');
     const types = await mockApi.getDocTypes();

@@ -3,6 +3,7 @@ import type {
   DocumentState,
   DocType,
   Template,
+  TemplateUploadResult,
   TraceEntry,
 } from './types';
 
@@ -16,6 +17,10 @@ export interface RenderResult {
 export interface DocumentApi {
   getDocTypes(): Promise<DocType[]>;
   getTemplates(): Promise<Template[]>;
+  uploadTemplate(
+    file: File,
+    adminToken: string
+  ): Promise<TemplateUploadResult>;
   createDocument(data: {
     draft: string;
     doc_type: string;

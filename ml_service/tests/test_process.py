@@ -73,7 +73,7 @@ def test_fallback_reports_reason_and_version() -> None:
     payload = process()
 
     assert payload["reason_code"] == "model_unavailable"
-    assert payload["model_version"] == "rule-based-1.0.0"
+    assert payload["model_version"] == "rule-based-1.1.0"
     assert payload["latency_ms"] >= 0
 
 
@@ -96,7 +96,8 @@ def test_fallback_extracts_only_labelled_requisites() -> None:
         "Генеральному директору ООО «Ромашка» Иванову И.И."
     )
     assert payload["requisites"]["doc_date"] == "12.03.2025"
-    assert payload["requisites"]["position"] is None
+    assert payload["requisites"]["author"] == "Петров П.П."
+    assert payload["requisites"]["position"] == "Начальник отдела аналитики"
 
 
 def test_missing_addressee_is_not_invented() -> None:

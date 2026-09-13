@@ -37,4 +37,12 @@ describe('AppShell', () => {
 
     expect(screen.getByText('Документ за 3 шага')).toBeInTheDocument();
   });
+
+  it('содержит ссылку на управление шаблонами', () => {
+    renderShell();
+
+    expect(
+      screen.getByRole('link', { name: 'Управление шаблонами' })
+    ).toHaveAttribute('href', '/admin');
+  });
 });

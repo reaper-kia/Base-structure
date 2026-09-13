@@ -4,6 +4,7 @@ import type {
   DocumentState,
   DocType,
   Template,
+  TemplateUploadResult,
   MockScenario,
   TraceEntry,
   DevState,
@@ -530,6 +531,44 @@ export const mockApi: DocumentApi = {
   async getTemplates(): Promise<Template[]> {
     await delay(MOCK_DELAY);
     return mockTemplates;
+  },
+
+  async uploadTemplate(
+    file: File,
+    adminToken: string
+  ): Promise<TemplateUploadResult> {
+    await delay(MOCK_DELAY);
+    if (!adminToken.trim()) {
+      throw new Error('Недействительный ключ администратора');
+    }
+
+    const rawId = file.name
+      .replace(/\.docx$/i, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const baseId = rawId || 'template';
+    const reserved = new Set(mockTemplates.map((template) => template.id));
+    let id = baseId;
+    let counter = 1;
+    while (reserved.has(id)) {
+      id = `${baseId}-${counter}`;
+      counter += 1;
+    }
+
+    mockTemplates.push({
+      id,
+      name: 'Загруженный шаблон',
+      description: 'Распознан автоматически из загруженного DOCX',
+      available: true,
+    });
+
+    return {
+      id,
+      name: 'Загруженный шаблон',
+      rules: {},
+      warnings: [],
+    };
   },
 
   async createDocument(data: {

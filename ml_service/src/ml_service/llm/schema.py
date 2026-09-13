@@ -11,6 +11,8 @@ import json
 import re
 from typing import Any
 
+from ml_service.requisite_normalizer import normalize_author_position
+
 CHANGE_TYPES = ("spelling", "punctuation", "style", "structure")
 
 # Срезаем markdown-ограждение и всё до первой «{» / после последней «}».
@@ -132,6 +134,8 @@ def normalize_llm_response(
         elif value is not None:
             value = None
         requisites[key] = value
+
+    requisites = normalize_author_position(requisites)
 
     changes: list[dict[str, str]] = []
     for item in data.get("changes") or []:

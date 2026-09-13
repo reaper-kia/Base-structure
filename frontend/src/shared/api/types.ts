@@ -33,6 +33,13 @@ export interface Template {
   preview_url?: string | null;
 }
 
+export interface TemplateUploadResult {
+  id: string;
+  name: string;
+  rules: Record<string, unknown>;
+  warnings: string[];
+}
+
 export interface ChangeItem {
   type: ChangeType;
   from: string;

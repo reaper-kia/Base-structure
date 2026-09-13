@@ -54,6 +54,42 @@ def response_skeleton(requisite_keys: list[str]) -> str:
     )
 
 
+def _example_response(
+    requisite_keys: list[str],
+    *,
+    include_addressee: bool,
+) -> str:
+    """Few-shot пример, согласованный с ключами конкретного документа."""
+
+    requisites: dict[str, str | None] = dict.fromkeys(requisite_keys)
+
+    if include_addressee and "addressee" in requisites:
+        requisites["addressee"] = (
+            "Генеральному директору ООО «Ромашка» Иванову И.И."
+        )
+
+    if "author" in requisites:
+        requisites["author"] = (
+            "Петров П.П."
+            if "position" in requisites
+            else "Начальник отдела аналитики Петров П.П."
+        )
+    if "position" in requisites:
+        requisites["position"] = "Начальник отдела аналитики"
+
+    return json.dumps(
+        {
+            "improved_text": (
+                "Прошу рассмотреть возможность выделения средств на закупку "
+                "трёх компьютеров стоимостью 180 000 рублей."
+            ),
+            "requisites": requisites,
+            "changes": [],
+        },
+        ensure_ascii=False,
+    )
+
+
 def build_process_prompt(
     *,
     draft: str,
@@ -66,6 +102,14 @@ def build_process_prompt(
         DOC_TYPE_NAME=doc_type_name,
         STRUCTURE_HINT=structure_hint,
         RESPONSE_SKELETON=response_skeleton(requisite_keys),
+        EXAMPLE_WITH_ADDRESSEE=_example_response(
+            requisite_keys,
+            include_addressee=True,
+        ),
+        EXAMPLE_WITHOUT_ADDRESSEE=_example_response(
+            requisite_keys,
+            include_addressee=False,
+        ),
         DRAFT=draft,
     )
 

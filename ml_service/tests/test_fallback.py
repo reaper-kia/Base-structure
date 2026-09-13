@@ -27,6 +27,29 @@ def test_labelled_lines_become_requisites() -> None:
     assert requisites["doc_date"] == "12.03.2025"
     assert requisites["reg_number"] == "47-СЗ"
     assert requisites["subject"] == "О закупке офисной техники"
+    assert requisites["author"] == "Петров П.П."
+    assert requisites["position"] == "Начальник отдела аналитики"
+
+
+def test_author_position_split_preserves_letter_organization() -> None:
+    requisites = extract_requisites(
+        "От кого: Генеральный директор ООО «Ромашка» Иванов И.И.",
+        ["author", "position"],
+    )
+
+    assert requisites == {
+        "author": "ООО «Ромашка» Иванов И.И.",
+        "position": "Генеральный директор",
+    }
+
+
+def test_reference_author_keeps_position_when_position_key_is_absent() -> None:
+    requisites = extract_requisites(
+        "Составитель: руководитель отдела развития Козлов К.К.",
+        ["author"],
+    )
+
+    assert requisites["author"] == "руководитель отдела развития Козлов К.К."
 
 
 def test_label_without_separator_is_recognised() -> None:

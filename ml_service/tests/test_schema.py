@@ -77,6 +77,54 @@ def test_empty_string_is_normalized_to_null() -> None:
     assert normalized["requisites"] == {"author": None, "doc_date": None}
 
 
+def test_combined_author_and_position_are_split() -> None:
+    payload = {
+        "improved_text": "Текст",
+        "requisites": {
+            "author": "Начальник отдела аналитики Петров П.П.",
+            "position": None,
+        },
+    }
+
+    normalized = normalize_llm_response(payload, ["author", "position"])
+
+    assert normalized["requisites"] == {
+        "author": "Петров П.П.",
+        "position": "Начальник отдела аналитики",
+    }
+
+
+def test_split_does_not_overwrite_separately_returned_position() -> None:
+    payload = {
+        "improved_text": "Текст",
+        "requisites": {
+            "author": "Начальник отдела аналитики Петров П.П.",
+            "position": "Руководитель аналитики",
+        },
+    }
+
+    normalized = normalize_llm_response(payload, ["author", "position"])
+
+    assert normalized["requisites"] == {
+        "author": "Петров П.П.",
+        "position": "Руководитель аналитики",
+    }
+
+
+def test_uncertain_author_format_is_left_unchanged() -> None:
+    payload = {
+        "improved_text": "Текст",
+        "requisites": {
+            "author": "Отдел аналитики Петров П.П.",
+            "position": None,
+        },
+    }
+
+    normalized = normalize_llm_response(payload, ["author", "position"])
+
+    assert normalized["requisites"] == payload["requisites"]
+
+
 def test_missing_changes_becomes_empty_list() -> None:
     payload = valid_payload()
     payload.pop("changes")

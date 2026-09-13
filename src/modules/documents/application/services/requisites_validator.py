@@ -11,6 +11,9 @@ import yaml
 
 from src.modules.documents.domain.entities import Requisite
 from src.modules.documents.domain.enums import RequisiteStatus
+from src.modules.documents.application.services.requisite_normalizer import (
+    normalize_author_position,
+)
 
 _CONFIG_DIR = Path(__file__).resolve().parents[2] / "config" / "doc_types"
 
@@ -41,6 +44,7 @@ def validate(
     """
 
     schema = load_doc_type(doc_type)
+    normalized_extracted = normalize_author_position(extracted or {})
     auto = schema.get("auto_fillable", {}) or {}
     existing_by_key = {item.key: item for item in (existing or [])}
     result: list[Requisite] = []
@@ -62,7 +66,7 @@ def validate(
             )
             continue
 
-        value = (extracted or {}).get(key) or None
+        value = normalized_extracted.get(key) or None
 
         if value:
             status = RequisiteStatus.FOUND_IN_DRAFT

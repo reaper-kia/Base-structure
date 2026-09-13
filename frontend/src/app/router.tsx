@@ -5,6 +5,7 @@ import { DocumentPage } from '../pages/document-detail/DocumentPage';
 import { DevPanel } from '../pages/dev/DevPanel';
 import { TracePage } from '../pages/trace/TracePage';
 import { NotFoundPage } from '../pages/not-found/NotFoundPage';
+import { AdminPage } from '../pages/admin/AdminPage';
 
 /**
  * Единственный сценарий продукта — три шага до готового DOCX, поэтому
@@ -15,6 +16,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/admin" element={<AdminPage />} />
         <Route element={<AppShell />}>
           <Route path="/" element={<WizardPage />} />
           <Route path="/documents/:id" element={<DocumentPage />} />

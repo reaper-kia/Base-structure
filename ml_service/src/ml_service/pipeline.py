@@ -26,7 +26,7 @@ from ml_service.schemas import FactGuardResult, ProcessRequest, ProcessResponse
 
 logger = logging.getLogger(__name__)
 
-FALLBACK_VERSION = "rule-based-1.0.0"
+FALLBACK_VERSION = "rule-based-1.1.0"
 
 
 class ModelUnavailable(RuntimeError):

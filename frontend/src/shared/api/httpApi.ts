@@ -5,12 +5,15 @@ import type {
   DocumentState,
   DocType,
   Template,
+  TemplateUploadResult,
   TraceEntry,
 } from './types';
 
 const BASE = '/api';
 
 const STATUS_MESSAGES: Record<number, string> = {
+  401: 'Неверный ключ администратора',
+  413: 'Файл превышает допустимый размер',
   404: 'Документ не найден',
   409: 'Документ ещё обрабатывается',
   422: 'Проверьте введённые данные',
@@ -40,11 +43,15 @@ function safeDecode(value: string): string {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const hasBody = options.body !== undefined;
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
   const response = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
       Accept: 'application/json',
-      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      ...(hasBody && !isFormData
+        ? { 'Content-Type': 'application/json' }
+        : {}),
       ...(options.headers ?? {}),
     },
   });
@@ -68,6 +75,17 @@ export const httpApi: DocumentApi = {
     if (Array.isArray(json)) return json as Template[];
     const wrapped = json as { templates?: Template[] };
     return wrapped.templates ?? [];
+  },
+
+  uploadTemplate: (file, adminToken) => {
+    const body = new FormData();
+    body.append('file', file, file.name);
+
+    return request<TemplateUploadResult>('/templates/upload', {
+      method: 'POST',
+      headers: { 'X-Admin-Token': adminToken },
+      body,
+    });
   },
 
   createDocument: (data) =>

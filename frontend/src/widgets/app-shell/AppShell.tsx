@@ -226,6 +226,13 @@ export function AppShell() {
           >
             Dev-панель
           </Link>
+          <Link
+            to="/admin"
+            className="text-xs underline"
+            style={{ color: 'var(--muted-foreground)' }}
+          >
+            Управление шаблонами
+          </Link>
           <span
             className="text-xs"
             style={{ color: 'var(--muted-foreground)' }}
