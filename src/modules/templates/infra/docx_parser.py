@@ -4,6 +4,7 @@ import io
 import re
 import zipfile
 import xml.etree.ElementTree as ET
+from typing import Any
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 TWIPS_PER_MM = 56.6929  # п. 7.2: pgMar хранит твипы, 1 мм = 56.7 твипа
@@ -15,7 +16,7 @@ JC_MAP = {"both": "justify", "left": "left", "center": "center", "right": "right
 # она покрывает обязательные реквизиты всех четырёх типов, поэтому
 # загруженный шаблон сразу проходит проверку покрытия и доступен в работе.
 # Пользователь может поправить rules.yaml руками.
-DEFAULT_LAYOUT = [
+DEFAULT_LAYOUT: list[dict[str, Any]] = [
     {"key": "addressee", "position": "top_right"},
     {"key": "author", "position": "top_right"},
     {
@@ -74,7 +75,7 @@ def _w(tag: str) -> str:
     return f"{{{W}}}{tag}"
 
 
-def parse_docx_template(data: bytes) -> tuple[dict, list[str]]:
+def parse_docx_template(data: bytes) -> tuple[dict[str, Any], list[str]]:
     """Извлекает правила оформления из DOCX. Возвращает (rules, warnings)."""
     warnings: list[str] = []
     bio = io.BytesIO(data)
@@ -87,7 +88,7 @@ def parse_docx_template(data: bytes) -> tuple[dict, list[str]]:
         if "word/document.xml" not in names:
             raise NotADocxError("В архиве нет word/document.xml")
 
-        rules: dict = {
+        rules: dict[str, Any] = {
             "name": "",
             "description": "Распознан автоматически из загруженного DOCX",
             "page": {"top_mm": 20, "bottom_mm": 20, "left_mm": 30, "right_mm": 15},
@@ -133,31 +134,33 @@ def parse_docx_template(data: bytes) -> tuple[dict, list[str]]:
                 rpr = normal.find(_w("rPr"))
                 if rpr is not None:
                     rfonts = rpr.find(_w("rFonts"))
-                    if rfonts is not None and rfonts.get(_w("ascii")):
-                        rules["font"]["family"] = rfonts.get(_w("ascii"))
+                    ascii_font = rfonts.get(_w("ascii")) if rfonts is not None else None
+                    if ascii_font:
+                        rules["font"]["family"] = ascii_font
                     sz = rpr.find(_w("sz"))
-                    if sz is not None:
-                        rules["font"]["size_pt"] = int(sz.get(_w("val"))) / 2
+                    size_value = sz.get(_w("val")) if sz is not None else None
+                    if size_value:
+                        rules["font"]["size_pt"] = int(size_value) / 2
                 ppr = normal.find(_w("pPr"))
                 if ppr is not None:
                     spacing = ppr.find(_w("spacing"))
                     if spacing is not None:
-                        if spacing.get(_w("line")):
-                            rules["spacing"]["line"] = round(
-                                int(spacing.get(_w("line"))) / 240, 2
-                            )
-                        if spacing.get(_w("after")):
-                            rules["spacing"]["space_after_pt"] = (
-                                int(spacing.get(_w("after"))) / 20
-                            )
+                        line_value = spacing.get(_w("line"))
+                        if line_value:
+                            rules["spacing"]["line"] = round(int(line_value) / 240, 2)
+                        after_value = spacing.get(_w("after"))
+                        if after_value:
+                            rules["spacing"]["space_after_pt"] = int(after_value) / 20
                     ind = ppr.find(_w("ind"))
-                    if ind is not None and ind.get(_w("firstLine")):
+                    first_line = ind.get(_w("firstLine")) if ind is not None else None
+                    if first_line:
                         rules["spacing"]["first_line_indent_cm"] = round(
-                            int(ind.get(_w("firstLine"))) / TWIPS_PER_MM / 10, 2
+                            int(first_line) / TWIPS_PER_MM / 10, 2
                         )
                     jc = ppr.find(_w("jc"))
                     if jc is not None:
-                        rules["alignment"] = JC_MAP.get(jc.get(_w("val")), "justify")
+                        alignment = jc.get(_w("val"))
+                        rules["alignment"] = JC_MAP.get(alignment or "", "justify")
         else:
             warnings.append("Отсутствует styles.xml — применены значения по умолчанию")
 

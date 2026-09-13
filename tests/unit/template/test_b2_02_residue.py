@@ -96,7 +96,9 @@ def test_classic_header_carries_configured_organization(renderer, monkeypatch) -
     assert "[" not in header_text
 
 
-def test_unset_organization_stays_an_explicit_placeholder(renderer, monkeypatch) -> None:
+def test_unset_organization_stays_an_explicit_placeholder(
+    renderer, monkeypatch
+) -> None:
     """Незаданное название — явная пометка, а не выдуманная организация."""
     from src.core import config
 

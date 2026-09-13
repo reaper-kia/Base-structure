@@ -9,32 +9,8 @@ jobs:
   backend:
     name: Backend (lint + tests)
     runs-on: ubuntu-latest
-    # Тесты подменяют зависимости и работают на фейках, но база и кэш
-    # поднимаются: так прогон не зависит от того, не забыл ли кто-то
-    # подмену в новом тесте.
-    services:
-      db:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Тесты подменяют внешние зависимости и работают на фейках,
+    # поэтому отдельные PostgreSQL/Redis-контейнеры в CI не требуются.
     env:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
@@ -64,7 +40,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Lint (ruff)
-        run: ruff check src/ tests/ scripts/ migrations/
+        run: ruff check .
+
+      - name: Type check (mypy)
+        run: mypy src
 
       - name: Run tests
         run: pytest tests/ -v
@@ -76,6 +55,7 @@ jobs:
       # и способ увидеть дефект оформления глазами (критерий 4.4).
       - name: Upload DOCX samples
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: docx-samples
@@ -133,7 +113,7 @@ jobs:
           pip install pytest
 
       - name: Run tests
-        run: pytest tests -q
+        run: python -m pytest tests -q
 
   frontend:
     name: Frontend (lint + tests + build)
@@ -158,6 +138,8 @@ jobs:
 
       - name: Test
         run: npm run test
+        env:
+          VITE_USE_MOCK: "true"
 
       - name: Build
         run: npm run build

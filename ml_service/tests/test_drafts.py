@@ -20,7 +20,9 @@ from fastapi.testclient import TestClient
 from ml_service.main import app
 
 DRAFTS_DIR = Path(__file__).parent / "drafts"
-CASES = sorted(path.stem.removesuffix(".expected") for path in DRAFTS_DIR.glob("*.expected.json"))
+CASES = sorted(
+    path.stem.removesuffix(".expected") for path in DRAFTS_DIR.glob("*.expected.json")
+)
 
 client = TestClient(app)
 
@@ -107,7 +109,10 @@ def test_facts_survive_and_nothing_is_added(name: str) -> None:
     )
     payload = response.json()
     haystack = " ".join(
-        [payload["improved_text"], *[str(value) for value in payload["requisites"].values()]]
+        [
+            payload["improved_text"],
+            *[str(value) for value in payload["requisites"].values()],
+        ]
     )
 
     for anchor in expected["anchors_must_survive"]:

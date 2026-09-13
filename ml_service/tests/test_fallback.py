@@ -21,7 +21,9 @@ def test_labelled_lines_become_requisites() -> None:
     )
     requisites = extract_requisites(draft, KEYS)
 
-    assert requisites["addressee"] == "Генеральному директору ООО «Ромашка» Иванову И.И."
+    assert (
+        requisites["addressee"] == "Генеральному директору ООО «Ромашка» Иванову И.И."
+    )
     assert requisites["doc_date"] == "12.03.2025"
     assert requisites["reg_number"] == "47-СЗ"
     assert requisites["subject"] == "О закупке офисной техники"

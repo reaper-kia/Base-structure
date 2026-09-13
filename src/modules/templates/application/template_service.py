@@ -25,6 +25,8 @@ DEFAULT_ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 def user_templates_dir() -> Path:
     """Каталог пользовательских шаблонов (монтируется томом, доступен на запись)."""
     return Path(settings.user_templates_dir)
+
+
 DOC_TYPES_DIR = (
     Path(__file__).resolve().parents[2] / "documents" / "config" / "doc_types"
 )
@@ -115,7 +117,7 @@ def _docx_is_usable(path: Path) -> bool:
             names = set(z.namelist())
             if not all(part in names for part in REQUIRED_DOCX_PARTS):
                 return False
-        Document(path)  # финальная проба: python-docx реально открывает файл
+        Document(str(path))  # финальная проба: python-docx реально открывает файл
         return True
     except Exception as exc:  # noqa: BLE001 - проба пригодности: список исключений
         logger.debug("DOCX %s не прошёл пробу пригодности: %s", path, exc)

@@ -225,7 +225,7 @@ async def transcribe(
     finally:
         try:
             await audio.close()
-        except Exception:
+        except OSError:
             logger.warning(
                 "Не удалось закрыть временный загруженный файл",
                 exc_info=True,

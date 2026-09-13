@@ -22,9 +22,10 @@ logger = logging.getLogger(__name__)
 
 try:
     import vosk
-except Exception as exc:  # Приложение должно подняться даже при проблеме с Vosk.
+except (ImportError, OSError) as exc:
+    # Приложение должно подняться даже при проблеме импорта/загрузки Vosk.
     vosk = None
-    _VOSK_IMPORT_ERROR: Exception | None = exc
+    _VOSK_IMPORT_ERROR: ImportError | OSError | None = exc
 else:
     _VOSK_IMPORT_ERROR = None
 

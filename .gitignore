@@ -54,6 +54,7 @@ dist/
 
 /certs/*.key
 /certs/*.crt
+/smoke_*.docx
 # Project generated files
 project-tree.txt
 

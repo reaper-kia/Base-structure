@@ -124,17 +124,21 @@ async def main() -> int:
     average = sum(latencies) / len(latencies) if latencies else 0.0
 
     print()
-    print(json.dumps(
-        {
-            "drafts": total,
-            "valid_json_rate": round(rate, 1),
-            "clean_guard_rate": round(clean_guard / total * 100, 1) if total else 0.0,
-            "avg_latency_seconds": round(average, 2),
-            "model": client.model,
-        },
-        ensure_ascii=False,
-        indent=2,
-    ))
+    print(
+        json.dumps(
+            {
+                "drafts": total,
+                "valid_json_rate": round(rate, 1),
+                "clean_guard_rate": round(clean_guard / total * 100, 1)
+                if total
+                else 0.0,
+                "avg_latency_seconds": round(average, 2),
+                "model": client.model,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
     if rate >= 90:
         print("\n>= 90%: идём по плану.")

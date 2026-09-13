@@ -445,8 +445,7 @@ class DocumentApiClient:
         return DocumentApiContractError(
             message,
             public_message=(
-                "Сервис документов вернул неожиданный ответ. "
-                "Попробуйте ещё раз позже."
+                "Сервис документов вернул неожиданный ответ. Попробуйте ещё раз позже."
             ),
         )
 

@@ -58,7 +58,9 @@ def test_registration_numbers_are_extracted() -> None:
 
 
 def test_conditions_are_classified_by_direction() -> None:
-    kinds = {item["norm"] for item in extract("выдать не позднее 18.09.2026")["conditions"]}
+    kinds = {
+        item["norm"] for item in extract("выдать не позднее 18.09.2026")["conditions"]
+    }
 
     assert kinds == {"before"}
 

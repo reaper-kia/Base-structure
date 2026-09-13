@@ -17,6 +17,7 @@ from io import BytesIO
 from pathlib import Path
 
 from docx import Document
+from docx.document import Document as DocxDocument
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -136,7 +137,9 @@ class TemplateDocxRenderer:
         template = self.loader.load_with_fallback(template_id)
         rules = template.rules
 
-        document = Document(template.docx_path) if template.docx_path else Document()
+        document = (
+            Document(str(template.docx_path)) if template.docx_path else Document()
+        )
         _clear_paragraphs(document)
         _clear_tables(document)
 
@@ -179,7 +182,7 @@ class TemplateDocxRenderer:
 
     # --- страница и колонтитулы -------------------------------------------
 
-    def _apply_page_settings(self, document: Document, rules: dict) -> None:
+    def _apply_page_settings(self, document: DocxDocument, rules: dict) -> None:
         section = document.sections[0]
         page = rules["page"]
         section.top_margin = Mm(page["top_mm"])
@@ -189,7 +192,7 @@ class TemplateDocxRenderer:
 
     def _apply_headers_footers(
         self,
-        document: Document,
+        document: DocxDocument,
         rules: dict,
         requisites: list[Requisite],
         doc_type_name: str,
@@ -249,7 +252,7 @@ class TemplateDocxRenderer:
 
     # --- тело документа ---------------------------------------------------
 
-    def _paragraph(self, document: Document, position: str):
+    def _paragraph(self, document: DocxDocument, position: str):
         paragraph = document.add_paragraph()
         paragraph.alignment = ALIGNMENT_BY_POSITION.get(
             position, WD_ALIGN_PARAGRAPH.LEFT
@@ -278,7 +281,7 @@ class TemplateDocxRenderer:
 
     def _apply_layout(
         self,
-        document: Document,
+        document: DocxDocument,
         rules: dict,
         requisites: list[Requisite],
         improved_text: str,
@@ -317,7 +320,7 @@ class TemplateDocxRenderer:
 
     def _add_doc_title(
         self,
-        document: Document,
+        document: DocxDocument,
         block: dict,
         doc_type_name: str,
         family: str,
@@ -342,7 +345,7 @@ class TemplateDocxRenderer:
 
     def _add_requisite(
         self,
-        document: Document,
+        document: DocxDocument,
         block: dict,
         by_key: dict[str, Requisite],
         family: str,
@@ -359,7 +362,7 @@ class TemplateDocxRenderer:
 
         self._add_run(
             paragraph,
-            f"[{requisite.label}]" if unfilled else requisite.value,
+            f"[{requisite.label}]" if unfilled else (requisite.value or ""),
             family,
             block.get("font_size_pt", size),
             bold=bool(block.get("bold", False)),
@@ -368,7 +371,7 @@ class TemplateDocxRenderer:
 
     def _add_line(
         self,
-        document: Document,
+        document: DocxDocument,
         block: dict,
         by_key: dict[str, Requisite],
         family: str,
@@ -399,7 +402,7 @@ class TemplateDocxRenderer:
             unfilled = _is_unfilled(requisite)
             self._add_run(
                 paragraph,
-                f"[{requisite.label}]" if unfilled else requisite.value,
+                f"[{requisite.label}]" if unfilled else (requisite.value or ""),
                 family,
                 size_pt,
                 unfilled=unfilled,
@@ -407,7 +410,7 @@ class TemplateDocxRenderer:
 
     def _add_signature(
         self,
-        document: Document,
+        document: DocxDocument,
         block: dict,
         by_key: dict[str, Requisite],
         family: str,
@@ -425,8 +428,7 @@ class TemplateDocxRenderer:
         requisites = [
             by_key[key]
             for key in keys
-            if key in by_key
-            and (by_key[key].required or by_key[key].value)
+            if key in by_key and (by_key[key].required or by_key[key].value)
         ]
 
         if not requisites:
@@ -444,7 +446,7 @@ class TemplateDocxRenderer:
             unfilled = _is_unfilled(requisite)
             self._add_run(
                 paragraph,
-                f"[{requisite.label}]" if unfilled else requisite.value,
+                f"[{requisite.label}]" if unfilled else (requisite.value or ""),
                 family,
                 size_pt,
                 unfilled=unfilled,
@@ -452,7 +454,7 @@ class TemplateDocxRenderer:
 
     def _add_table(
         self,
-        document: Document,
+        document: DocxDocument,
         block: dict,
         by_key: dict[str, Requisite],
         family: str,
@@ -496,7 +498,7 @@ class TemplateDocxRenderer:
 
     def _add_body(
         self,
-        document: Document,
+        document: DocxDocument,
         text: str,
         rules: dict,
         family: str,

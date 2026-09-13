@@ -158,7 +158,9 @@ def test_type_title_is_skipped_when_type_does_not_ask_for_it(
 @pytest.mark.parametrize("template_id", TEMPLATE_IDS)
 def test_signature_block_matches_organizer_format(renderer, template_id) -> None:
     """«Подпись — должность, линия подписи, И.О. Фамилия»."""
-    texts = [p.text for p in _render(renderer, template_id).paragraphs if p.text.strip()]
+    texts = [
+        p.text for p in _render(renderer, template_id).paragraphs if p.text.strip()
+    ]
 
     position_index = texts.index(VALUES["position"])
 

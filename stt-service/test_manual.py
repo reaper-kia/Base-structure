@@ -74,7 +74,7 @@ def request_json(
         raise RuntimeError(f"Сервис вернул невалидный JSON: {raw_body!r}") from exc
 
     if not isinstance(payload, dict):
-        raise RuntimeError(f"Ожидался JSON-объект, получено: {payload!r}")
+        raise TypeError(f"Ожидался JSON-объект, получено: {payload!r}")
 
     return status_code, payload
 
@@ -155,13 +155,13 @@ def test_stt(base_url: str) -> dict[str, Any]:
         )
 
     if not isinstance(payload["text"], str):
-        raise RuntimeError("Поле text должно быть строкой")
+        raise TypeError("Поле text должно быть строкой")
 
     if not isinstance(
         payload["duration_seconds"],
         (int, float),
     ):
-        raise RuntimeError("Поле duration_seconds должно быть числом")
+        raise TypeError("Поле duration_seconds должно быть числом")
 
     if abs(float(payload["duration_seconds"]) - SYNTHETIC_DURATION_SECONDS) > 0.01:
         raise RuntimeError(
@@ -210,7 +210,7 @@ def main() -> int:
                 ensure_ascii=False,
             ),
         )
-    except Exception as exc:
+    except (ConnectionError, RuntimeError, TypeError) as exc:
         print(
             f"Проверка завершилась ошибкой: {exc}",
             file=sys.stderr,

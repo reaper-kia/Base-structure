@@ -158,7 +158,7 @@ async def run(
 
         llm_duration_ms: float | None = None
 
-        if cached_payload is not None:
+        if isinstance(cached_payload, dict):
             result = LLMResult(**cached_payload)
             trace_store.record(
                 document_id,

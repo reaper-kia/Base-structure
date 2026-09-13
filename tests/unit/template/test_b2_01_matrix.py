@@ -78,9 +78,9 @@ def test_matrix_all_required_markers_present(renderer, doc_type, template_id) ->
 
     for r in spec.get("requisites", []):
         if r.get("required"):
-            assert _marker(r["key"]) in text, (
-                f"{doc_type}/{template_id}: реквизит «{r['key']}» не доехал до файла"
-            )
+            assert (
+                _marker(r["key"]) in text
+            ), f"{doc_type}/{template_id}: реквизит «{r['key']}» не доехал до файла"
     assert "BODY_MARKER_42" in text
 
 

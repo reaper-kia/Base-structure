@@ -106,6 +106,7 @@ def match_label(line: str) -> tuple[str, str] | None:
 
     return LABEL_TO_KEY[match.group(1).strip().lower()], match.group(2).strip()
 
+
 _MULTISPACE = re.compile(r"[ \t]{2,}")
 _SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?])")
 # Пробел после знака ставим только перед буквой: иначе «12,5» превратится
