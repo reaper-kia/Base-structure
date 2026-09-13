@@ -66,8 +66,8 @@ function Pane({ title, label, segments }: PaneProps) {
           wordBreak: 'break-word',
           fontFamily: 'var(--font-mono)',
           fontSize: '0.78rem',
-          lineHeight: 1.7,
-          maxHeight: 560,
+          lineHeight: 1.85,
+          maxHeight: 340,
           minHeight: 220,
         }}
       >

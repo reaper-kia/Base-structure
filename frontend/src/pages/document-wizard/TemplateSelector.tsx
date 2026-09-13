@@ -1,5 +1,4 @@
 import { useDocumentStore } from '../../shared/store/documentStore';
-import { FieldLabel } from '../../shared/ui/FieldLabel';
 import type { Template } from '../../shared/api/types';
 
 const TEMPLATE_META: Record<string, { font: string; accent: string }> = {
@@ -14,11 +13,12 @@ interface TemplateCardProps {
 }
 
 function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
-  const meta = TEMPLATE_META[template.id] ?? {
-    font: 'Times New Roman',
-    accent: 'var(--tpl-accent-ink)',
-  };
   const disabled = !template.available;
+  const meta =
+    TEMPLATE_META[template.id] ?? {
+      font: 'Times New Roman',
+      accent: 'var(--tpl-accent-ink)',
+    };
 
   return (
     <button
@@ -33,14 +33,14 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
           ? `Шаблон ${template.name} недоступен: ${template.description}`
           : `Выбрать шаблон оформления: ${template.name}`
       }
-      className="text-left p-4 transition-all hover:shadow-md"
+      className="text-left p-4 transition-all hover:shadow-md w-full"
       style={{
         background: selected ? 'var(--primary)' : 'var(--card)',
         border: selected ? '2px solid var(--accent)' : '2px solid var(--border)',
         borderRadius: 'var(--radius)',
         color: selected ? '#fff' : 'var(--foreground)',
-        cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.55 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
       }}
     >
       <div
@@ -66,18 +66,20 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
           </span>
         </div>
         <div className="space-y-1">
-          {['80%', '80%', '60%'].map((width, index) => (
-            <div
-              key={index}
-              className="h-1.5 rounded-sm"
-              style={{
-                background: selected
-                  ? 'rgba(255,255,255,0.25)'
-                  : 'var(--tpl-preview-line)',
-                width,
-              }}
-            />
-          ))}
+          {['Кому: ___________', 'От: ___________', 'Тема: ___________'].map(
+            (line, i) => (
+              <div
+                key={line}
+                className="h-1.5 rounded-sm"
+                style={{
+                  background: selected
+                    ? 'rgba(255,255,255,0.25)'
+                    : 'var(--tpl-preview-line)',
+                  width: i === 2 ? '60%' : '80%',
+                }}
+              />
+            )
+          )}
           <div
             className="h-px mt-2"
             style={{
@@ -86,21 +88,20 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
                 : 'var(--tpl-preview-line)',
             }}
           />
-          {['100%', '85%', '70%'].map((width, index) => (
+          {[0, 1, 2].map((i) => (
             <div
-              key={index}
+              key={i}
               className="h-1 rounded-sm"
               style={{
                 background: selected
                   ? 'rgba(255,255,255,0.18)'
                   : 'var(--tpl-preview-line-soft)',
-                width,
+                width: ['100%', '85%', '70%'][i],
               }}
             />
           ))}
         </div>
       </div>
-
       <div className="flex items-start justify-between gap-2">
         <div>
           <div
@@ -115,26 +116,16 @@ function TemplateCard({ template, selected, onClick }: TemplateCardProps) {
           <div
             className="text-xs mt-0.5"
             style={{
-              color: selected
-                ? 'rgba(255,255,255,0.65)'
-                : 'var(--muted-foreground)',
+              color: selected ? 'rgba(255,255,255,0.65)' : 'var(--muted-foreground)',
             }}
           >
             {template.description}
           </div>
-          {disabled && (
-            <div
-              className="text-xs mt-1 font-semibold"
-              style={{ color: '#dc2626' }}
-            >
-              Шаблон недоступен: папка повреждена
-            </div>
-          )}
         </div>
         {selected && (
           <div
             className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs"
-            style={{ background: 'var(--accent)' }}
+            style={{ background: 'var(--accent)', color: '#fff' }}
           >
             ✓
           </div>
@@ -151,15 +142,25 @@ export function TemplateSelector() {
 
   return (
     <div className="mb-6">
-      <FieldLabel>Как он должен выглядеть — шрифты, поля, колонтитулы</FieldLabel>
+      <label
+        className="block text-xs font-semibold uppercase tracking-widest mb-2"
+        style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
+      >
+        Шаблон оформления
+      </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {templates.map((template) => (
-          <TemplateCard
+        {templates.map((template, index) => (
+          <div
             key={template.id}
-            template={template}
-            selected={templateId === template.id}
-            onClick={() => setTemplateId(template.id)}
-          />
+            className="anim-card"
+            style={{ animationDelay: `${index * 80 + 120}ms` }}
+          >
+            <TemplateCard
+              template={template}
+              selected={templateId === template.id}
+              onClick={() => setTemplateId(template.id)}
+            />
+          </div>
         ))}
       </div>
     </div>

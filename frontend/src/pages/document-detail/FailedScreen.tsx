@@ -34,7 +34,7 @@ export function FailedScreen({ document, onRetry }: FailedScreenProps) {
   return (
     <section
       data-testid="failed-screen"
-      className="flex flex-col items-center gap-6 py-10 text-center"
+      className="anim-enter-up flex flex-col items-center gap-6 py-10 text-center"
     >
       <div
         className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"

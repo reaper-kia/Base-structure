@@ -47,6 +47,7 @@
   --border: #d3daf0;
   --ring: #0b4fca;
   --radius: 6px;
+  --diff-panel-bg: #f8faff;
   --diff-spelling: #ffe8cc;
   --diff-punctuation: #eadcff;
   --diff-style: #dbeafe;
@@ -131,6 +132,7 @@
   --muted-foreground: #7a88aa;
   --border: #252d45;
   --ring: #3d7ef5;
+  --diff-panel-bg: #0f1117;
 }
 
 * { box-sizing: border-box; }
