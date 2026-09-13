@@ -6,9 +6,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from ml_service.stt import load_model as load_stt_model, recognize as stt_recognize
 from ml_service.config import settings
 from ml_service.registry import registry
 from ml_service.schemas import (
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     registry.load()
+    load_stt_model()  # Загружаем модель распознавания речи при старте (ML-11)
     yield
 
 
@@ -80,6 +82,18 @@ def create_app() -> FastAPI:
             fallback_enabled=settings.fallback_enabled,
             supported_tasks=registry.supported_tasks,
         )
+
+    @app.post("/stt")
+    async def stt(audio: UploadFile = File(...)):
+        """ML-11: Эндпоинт для локального распознавания речи"""
+        audio_bytes = await audio.read()
+        try:
+            result = stt_recognize(audio_bytes)
+            return result
+        except RuntimeError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
 
     @app.post("/api/v1/process", response_model=ProcessResponse)
     async def process_document(request: ProcessRequest):
