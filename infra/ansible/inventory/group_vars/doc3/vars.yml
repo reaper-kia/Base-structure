@@ -6,7 +6,7 @@ deploy_user: deploy
 deploy_dir: /opt/doc3
 
 # Репозиторий проекта.
-app_repo: https://github.com/CHANGE-ME/doc3.git
+app_repo: https://github.com/reaper-kia/Base-structure.git
 app_version: main
 
 app_name: doc3
