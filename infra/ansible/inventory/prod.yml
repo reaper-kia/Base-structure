@@ -8,6 +8,6 @@ all:
     doc3:
       hosts:
         doc3-vps:
-          ansible_host: 51.250.34.95
-          ansible_user: reaper
-          ansible_ssh_private_key_file: /home/reaper/.ssh/yandex_ai_document
+          ansible_host: 103.76.52.3
+          ansible_user: dimok
+          ansible_ssh_private_key_file: /home/DIMOK/.ssh/yandex_ai_document

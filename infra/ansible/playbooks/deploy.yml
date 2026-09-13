@@ -44,7 +44,6 @@
         components: stable
         architectures: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
         signed_by: https://download.docker.com/linux/ubuntu/gpg
-        install_python_debian: true
       register: docker_repo
 
     - name: Обновить кэш apt

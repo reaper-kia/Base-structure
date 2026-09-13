@@ -199,8 +199,6 @@ services:
       - backend
 
   ollama:
-    mem_limit: 6000m
-    cpus: 8.0
     mem_limit: 6g
     cpus: 3.9 
     pids_limit: 200
