@@ -199,8 +199,13 @@ services:
       - backend
 
   ollama:
+<<<<<<< HEAD
     mem_limit: 6000m
     cpus: 8.0
+=======
+    mem_limit: 6g
+    cpus: 3.9 
+>>>>>>> 6a3a984 (ginal)
     pids_limit: 200
     image: ollama/ollama:latest
     container_name: doc3_ollama
