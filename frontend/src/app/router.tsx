@@ -1,7 +1,6 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { AdminPage } from '../pages/admin/AdminPage';
-import { HomePage } from '../pages/home/HomePage';
 import { LoginPage } from '../pages/login/LoginPage';
 import { NotFoundPage } from '../pages/not-found/NotFoundPage';
 import { WizardPage } from '../pages/document-wizard/WizardPage';
@@ -16,7 +15,7 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/wizard" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
         <Route element={<AppShell />}>

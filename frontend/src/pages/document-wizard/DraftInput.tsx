@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDocumentStore } from '../../shared/store/documentStore';
 import { PrimaryButton } from '../../shared/ui/PrimaryButton';
+import { SpeechInput } from '../../features/speech/SpeechInput';
 
 const MAX_LENGTH = 20_000;
 
@@ -109,6 +110,14 @@ export function DraftInput({ onNext }: DraftInputProps) {
     }
   };
 
+  const handleTranscript = useCallback(
+    (text: string) => {
+      const current = useDocumentStore.getState().draft;
+      setDraft(current.trim() ? `${current} ${text}` : text);
+    },
+    [setDraft]
+  );
+
   const loadDemo = (text: string) => {
     setDraft(text);
     setPasteError(null);
@@ -185,7 +194,17 @@ export function DraftInput({ onNext }: DraftInputProps) {
             className="block text-xs font-semibold uppercase tracking-widest mb-2"
             style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
           >
-            Примеры черновиков
+            Голосовой ввод
+          </div>
+          <div className="mb-4">
+            <SpeechInput onTranscript={handleTranscript} />
+          </div>
+
+          <div
+            className="block text-xs font-semibold uppercase tracking-widest mb-2"
+            style={{ color: 'var(--muted-foreground)', letterSpacing: '0.1em' }}
+          >
+            Примеры и инструменты
           </div>
           <div className="space-y-2">
             <button

@@ -34,6 +34,13 @@ export function useTheme() {
       // игнорируем: приватный режим и т.п.
     }
 
+    // Плавные переходы темы включаем после первой отрисовки,
+    // чтобы загрузка страницы не «мигала» перекраской
+    const timer = window.setTimeout(
+      () => document.body.classList.add('theme-ready'),
+      50
+    );
+
     // Защита значения: ThemeProvider из базовой заготовки может
     // перезаписать data-theme при старте. Возвращаем наше значение.
     const observer = new MutationObserver(() => {
@@ -46,7 +53,10 @@ export function useTheme() {
       attributeFilter: ['data-theme'],
     });
 
-    return () => observer.disconnect();
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+    };
   }, [theme]);
 
   const toggleTheme = () => {
